@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-8 sm:py-10">
+    <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+            <p class="text-sm font-bold uppercase tracking-widest text-fuchsia-600">Superadmin</p>
+            <h1 class="mt-2 text-3xl sm:text-4xl font-serif font-bold text-slate-900">Clientes</h1>
+            <p class="mt-2 text-slate-500">Perfiles privados, favoritas y material subido por clientes.</p>
+        </div>
+        <a href="{% url 'control_panel' %}" class="rounded-xl border border-slate-200 bg-white px-5 py-3 text-center text-sm font-bold text-slate-700">
+            <i class="fas fa-arrow-left mr-2"></i> Panel
+        </a>
+    </div>
+
+    <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+        <div class="flex items-start gap-3">
+            <span class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white text-amber-700">
+                <i class="fas fa-shield-alt"></i>
+            </span>
+            <div>
+                <h2 class="font-bold text-amber-950">Intervencion sobre clientes</h2>
+                <p class="mt-1 text-sm text-amber-800">Patricia puede editar datos, fotos y estado de cualquier cliente para asistencia, moderacion o retirada de contenido inadecuado.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-5 flex items-center justify-between">
+        <h2 class="text-xl font-bold text-slate-900">{{ clients_count }} clientes</h2>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {% for item in client_cards %}
+        <article class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <div class="flex items-start gap-4">
+                {% if item.profile.avatar %}
+                <img src="{{ item.profile.avatar.url }}" class="h-16 w-16 rounded-2xl object-cover" alt="{{ item.user.username }}">
+                {% else %}
+                <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-300">
+                    <i class="fas fa-user text-2xl"></i>
+                </div>
+                {% endif %}
+                <div class="min-w-0 flex-1">
+                    <h3 class="truncate font-bold text-slate-900">{{ item.user.username }}</h3>
+                    <p class="text-sm text-slate-500">{{ item.profile.get_zone_display|default:"Sin zona" }}</p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        {% if item.has_profile %}
+                        <span class="rounded-full bg-green-100 px-2 py-1 text-xs font-bold text-green-700">Perfil</span>
+                        {% else %}
+                        <span class="rounded-full bg-yellow-100 px-2 py-1 text-xs font-bold text-yellow-700">Incompleto</span>
+                        {% endif %}
+                        <span class="rounded-full bg-slate-50 px-2 py-1 text-xs font-bold text-slate-600">{{ item.favorites_count }} favoritas</span>
+                        <span class="rounded-full bg-slate-50 px-2 py-1 text-xs font-bold text-slate-600">{{ item.media_count }} fotos</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 grid grid-cols-2 gap-2">
+                <a href="{% url 'control_user_detail' item.user.id %}" class="h-10 rounded-xl bg-slate-900 text-center text-sm font-bold leading-10 text-white">Editar</a>
+                <a href="{% url 'control_user_detail' item.user.id %}#galeria-control" class="h-10 rounded-xl border border-slate-200 bg-white text-center text-sm font-bold leading-10 text-slate-700">Galeria</a>
+            </div>
+        </article>
+        {% empty %}
+        <div class="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center text-slate-400 md:col-span-2 xl:col-span-3">
+            No hay clientes registrados.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

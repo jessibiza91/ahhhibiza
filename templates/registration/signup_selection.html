@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-12">
+    <div class="text-center mb-12">
+        <h1 class="font-serif text-4xl font-bold text-slate-900 mb-4">Únete a AHHH IBIZA</h1>
+        <p class="text-lg text-slate-600">Elige cómo quieres participar en nuestra plataforma.</p>
+    </div>
+
+    <div class="flex flex-col md:flex-row gap-8 justify-center items-stretch">
+        <!-- Client Card -->
+        <a href="{% url 'client_register' %}"
+            class="group flex-1 bg-[#e5e7eb] p-10 rounded-3xl shadow-sm hover:shadow-xl hover:shadow-fuchsia-500/10 border border-slate-200 hover:border-fuchsia-500 transition-all duration-300 text-center flex flex-col items-center">
+            <div
+                class="w-24 h-24 bg-fuchsia-50 rounded-full flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-300">
+                <i class="fas fa-glass-cheers text-4xl text-fuchsia-600"></i>
+            </div>
+            <h3
+                class="font-serif text-2xl font-bold text-slate-900 mb-4 group-hover:text-fuchsia-700 transition-colors">
+                Soy Cliente</h3>
+            <p class="text-slate-600 leading-relaxed">Busco experiencias exclusivas, yates, villas y momentos
+                inolvidables.</p>
+        </a>
+
+        <!-- Professional Card -->
+        <a href="{% url 'professional_register' %}"
+            class="group flex-1 bg-[#e5e7eb] p-10 rounded-3xl shadow-sm hover:shadow-xl hover:shadow-fuchsia-500/10 border border-slate-200 hover:border-fuchsia-500 transition-all duration-300 text-center flex flex-col items-center">
+            <div
+                class="w-24 h-24 bg-purple-50 rounded-full flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-300">
+                <i class="fas fa-briefcase text-4xl text-purple-600"></i>
+            </div>
+            <h3 class="font-serif text-2xl font-bold text-slate-900 mb-4 group-hover:text-purple-700 transition-colors">
+                Soy Profesional</h3>
+            <p class="text-slate-600 leading-relaxed">Ofrezco servicios de lujo, alquileres, gestión o experiencias
+                únicas.</p>
+        </a>
+    </div>
+</div>
+{% endblock %}

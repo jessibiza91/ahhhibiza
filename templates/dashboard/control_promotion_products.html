@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-8 sm:py-10">
+    <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-5 mb-6">
+        <div>
+            <p class="text-sm font-bold uppercase tracking-widest text-fuchsia-600">Superadmin</p>
+            <h1 class="text-3xl sm:text-4xl font-serif font-bold text-slate-900 mt-2">Productos de promocion</h1>
+            <p class="text-slate-500 mt-2">Categorias internas que consumen Tangas y ordenan la visibilidad de los anuncios.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'control_panel' %}" class="h-11 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold flex items-center gap-2">
+                <i class="fas fa-arrow-left"></i> Panel
+            </a>
+            <a href="{% url 'control_promotion_product_create' %}" class="h-11 px-4 rounded-xl bg-slate-900 text-white font-bold flex items-center gap-2">
+                <i class="fas fa-plus"></i> Crear producto
+            </a>
+        </div>
+    </div>
+
+    <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm mb-6">
+        <h2 class="text-xl font-bold text-amber-950">Estrategia de visibilidad</h2>
+        <p class="text-sm text-amber-800 mt-1">Cuanto mayor sea el peso de prioridad, mas arriba aparecera el anuncio. Patricia puede crear productos como Basico, Destacado o Siempre arriba.</p>
+    </section>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {% for product in products %}
+        <article class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">{{ product.name }}</h2>
+                    <p class="text-sm text-slate-500 mt-1">{{ product.get_visibility_display }}</p>
+                </div>
+                {% if product.is_active %}
+                <span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">Activo</span>
+                {% else %}
+                <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-bold">Inactivo</span>
+                {% endif %}
+            </div>
+            <p class="text-sm text-slate-500 mt-4 min-h-[2.5rem]">{{ product.description|default:"Sin descripcion." }}</p>
+            <div class="grid grid-cols-3 gap-2 mt-5 text-center">
+                <div class="rounded-xl bg-fuchsia-50 p-3">
+                    <p class="text-2xl font-bold text-fuchsia-600">{{ product.price_tangas }}</p>
+                    <p class="text-xs text-fuchsia-700 font-bold">Tangas</p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-3">
+                    <p class="text-2xl font-bold text-slate-900">{{ product.priority_weight }}</p>
+                    <p class="text-xs text-slate-500 font-bold">Prioridad</p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-3">
+                    <p class="text-2xl font-bold text-slate-900">{{ product.duration_days }}</p>
+                    <p class="text-xs text-slate-500 font-bold">Dias</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-5">
+                <a href="{% url 'control_promotion_product_edit' product.id %}" class="h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center text-sm font-bold">Editar</a>
+                <form method="post" action="{% url 'control_promotion_product_delete' product.id %}" onsubmit="return confirm('Desactivar o eliminar este producto?');">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full h-10 rounded-xl bg-rose-50 text-rose-700 text-sm font-bold border border-rose-100">
+                        {% if product.ads.exists %}Desactivar{% else %}Eliminar{% endif %}
+                    </button>
+                </form>
+            </div>
+        </article>
+        {% empty %}
+        <div class="rounded-2xl border border-dashed border-slate-200 p-10 text-center text-slate-400">No hay productos de promocion.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

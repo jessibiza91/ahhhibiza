@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-8 sm:py-10">
+    <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
+        <div>
+            <p class="text-sm font-bold uppercase tracking-widest text-fuchsia-600">Superadmin</p>
+            <h1 class="mt-2 text-3xl sm:text-4xl font-serif font-bold text-slate-900">Materiales</h1>
+            <p class="mt-2 text-slate-500">Galeria global para asistencia y moderacion visual.</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{% url 'control_trash' %}" class="h-11 px-4 rounded-lg bg-rose-50 text-rose-700 font-bold flex items-center"><i class="fas fa-trash mr-2"></i>Papelera</a>
+            <a href="{% url 'control_panel' %}" class="h-11 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold flex items-center"><i class="fas fa-arrow-left mr-2"></i>Panel</a>
+        </div>
+    </header>
+
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white border border-slate-100 p-4 rounded-lg shadow-sm mb-6">
+        <input type="search" name="q" value="{{ query }}" placeholder="Profesional, cliente o anuncio" class="sm:col-span-2 h-12 px-4 border rounded-lg">
+        <select name="type" class="h-12 px-4 border rounded-lg bg-white">
+            <option value="">Todo el material</option>
+            <option value="profile" {% if media_type == 'profile' %}selected{% endif %}>Galerias internas</option>
+            <option value="public" {% if media_type == 'public' %}selected{% endif %}>Fotos publicas</option>
+            <option value="hot" {% if media_type == 'hot' %}selected{% endif %}>Fotos HOT</option>
+        </select>
+        <div class="sm:col-span-3 flex gap-2">
+            <button class="h-11 px-5 rounded-lg bg-slate-900 text-white font-bold">Filtrar</button>
+            {% if query or media_type %}<a href="{% url 'control_media' %}" class="h-11 px-5 rounded-lg bg-slate-100 text-slate-700 font-bold flex items-center">Limpiar</a>{% endif %}
+        </div>
+    </form>
+
+    {% if profile_media_count %}
+    <section class="mb-8">
+        <h2 class="text-xl font-bold text-slate-900 mb-4">Galerias internas <span class="text-slate-400">{{ profile_media_count }}</span></h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+            {% for media in profile_media_items %}
+            <article class="bg-white border border-slate-100 rounded-lg p-2 shadow-sm">
+                <a href="{{ media.file.url }}" target="_blank" class="block aspect-square rounded-lg overflow-hidden bg-slate-100">
+                    {% if media.is_video %}<video src="{{ media.file.url }}" class="w-full h-full object-cover"></video>{% else %}<img src="{{ media.file.url }}" class="w-full h-full object-cover" alt="Material de {{ media.profile.user.username }}">{% endif %}
+                </a>
+                <a href="{% url 'control_user_detail' media.profile.user.id %}#galeria-control" class="block mt-2 text-xs font-bold text-slate-700 truncate">{{ media.profile.user.username }}</a>
+                <form method="post" action="{% url 'delete_profile_media' media.id %}" class="mt-2">
+                    {% csrf_token %}<input type="hidden" name="from_control" value="1">
+                    <button class="w-full h-9 rounded-lg bg-rose-50 text-rose-700 text-xs font-bold" onclick="return confirm('Enviar este material a la papelera?');">Retirar</button>
+                </form>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if ad_image_count %}
+    <section>
+        <h2 class="text-xl font-bold text-slate-900 mb-4">Material de anuncios <span class="text-slate-400">{{ ad_image_count }}</span></h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+            {% for image in ad_image_items %}
+            <article class="bg-white border border-slate-100 rounded-lg p-2 shadow-sm">
+                <a href="{{ image.image.url }}" target="_blank" class="block aspect-square rounded-lg overflow-hidden bg-slate-100 relative">
+                    <img src="{{ image.image.url }}" class="w-full h-full object-cover" alt="{{ image.ad.title }}">
+                    {% if image.is_private %}<span class="absolute top-2 right-2 rounded bg-fuchsia-700 px-2 py-1 text-xs font-bold text-white">HOT</span>{% endif %}
+                </a>
+                <a href="{% url 'control_ad_detail' image.ad.id %}" class="block mt-2 text-xs font-bold text-slate-700 truncate">{{ image.ad.title }}</a>
+                <p class="text-xs text-slate-400 truncate">{{ image.ad.owner.username }}</p>
+                <form method="post" action="{% url 'delete_ad_image' image.id %}" class="mt-2">
+                    {% csrf_token %}<input type="hidden" name="from_control" value="1">
+                    <button class="w-full h-9 rounded-lg bg-rose-50 text-rose-700 text-xs font-bold" onclick="return confirm('Enviar esta imagen a la papelera?');">Retirar</button>
+                </form>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if not profile_media_count and not ad_image_count %}
+    <div class="bg-white border border-dashed border-slate-200 rounded-lg p-12 text-center text-slate-400">No hay materiales con estos filtros.</div>
+    {% endif %}
+</div>
+{% endblock %}

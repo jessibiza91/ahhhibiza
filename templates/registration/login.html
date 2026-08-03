@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-md mx-auto py-12">
+    <div class="bg-[#e5e7eb] p-8 rounded-2xl shadow-xl shadow-fuchsia-500/5 border border-slate-200">
+        <div class="text-center mb-8">
+            <h2 class="font-serif text-3xl font-bold text-slate-900 mb-2">Iniciar Sesión</h2>
+            <p class="text-slate-500 text-sm">Bienvenido de nuevo a la experiencia exclusiva.</p>
+        </div>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% for field in form %}
+            <div class="space-y-2">
+                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700">
+                    {{ field.label }}
+                </label>
+                <!-- Manually styling if widget attrs didn't catch (login view might use standard AuthForm) -->
+                <!-- Ideally AuthForm should also have widgets updated, but for now assuming standard render or context -->
+                <div class="mt-1">
+                    {{ field }}
+                </div>
+                {% if field.errors %}
+                <p class="text-red-500 text-xs mt-1">{{ field.errors.0 }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <button type="submit"
+                class="w-full py-3 px-4 bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-bold rounded-lg transition shadow-lg hover:shadow-fuchsia-500/30">
+                Entrar
+            </button>
+        </form>
+
+        <div class="mt-8 text-center pt-6 border-t border-slate-100">
+            <p class="text-slate-600">
+                ¿No tienes cuenta?
+                <a href="{% url 'register_selector' %}"
+                    class="text-fuchsia-600 font-bold hover:underline">Regístrate</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

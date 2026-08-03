@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-10">
+    <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-6">
+        <div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full md:w-auto">
+            <div class="relative">
+                {% if profile.avatar %}
+                <img src="{{ profile.avatar.url }}" class="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg">
+                {% else %}
+                <div class="w-24 h-24 rounded-full bg-gradient-to-br from-purple-100 to-fuchsia-100 flex items-center justify-center text-3xl text-fuchsia-300 border-4 border-white shadow-lg">
+                    <i class="fas fa-user"></i>
+                </div>
+                {% endif %}
+                <div class="absolute bottom-0 right-0 bg-green-500 w-6 h-6 rounded-full border-4 border-white" title="Online"></div>
+            </div>
+            <div class="min-w-0 text-center sm:text-left">
+                <h1 class="text-3xl font-bold text-slate-900 break-words">{{ user.username }}</h1>
+                <p class="text-slate-500 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                    {% if profile.get_age %}<span>{{ profile.get_age }} anos</span>{% endif %}
+                    <span>{{ profile.get_zone_display }}</span>
+                    {% if profile.origin %}<span>{{ profile.get_origin_display }}</span>{% endif %}
+                </p>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-4 w-full md:w-auto">
+            <a href="{% url 'professional_favorite_clients' %}" class="px-6 py-3 bg-white text-fuchsia-700 font-bold rounded-xl border border-fuchsia-100 shadow-sm hover:bg-fuchsia-50 transition flex items-center justify-center gap-2 w-full sm:w-auto" title="Clientes que te han guardado">
+                <i class="fas fa-heart"></i> Clientes favoritos{% if admirer_count %} ({{ admirer_count }}){% endif %}
+            </a>
+            <a href="{% url 'professional_wallet' %}" class="px-6 py-3 bg-amber-400 text-white font-bold rounded-xl shadow-lg hover:bg-amber-500 transition flex items-center justify-center gap-2 w-full sm:w-auto" title="Gestionar Tangas">
+                <i class="fas fa-credit-card"></i> RECARGAR TANGAS
+            </a>
+            <a href="{% url 'ad_create' %}" class="px-6 py-3 bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white font-bold rounded-xl shadow-lg hover:shadow-fuchsia-500/30 transition flex items-center justify-center gap-2 w-full sm:w-auto" title="Publicar un nuevo anuncio">
+                <i class="fas fa-plus"></i> Nuevo Anuncio
+            </a>
+        </div>
+    </div>
+
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-10">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div class="flex-1">
+                <div class="flex items-center justify-between mb-3 gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Activacion del perfil</h2>
+                        <p class="text-sm text-slate-500">Completa estos pasos para que tu perfil convierta mejor.</p>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <p class="text-3xl font-bold text-fuchsia-600">{{ profile_progress }}%</p>
+                        <p class="text-xs text-slate-400">{{ completed_steps }} de {{ checklist|length }} pasos</p>
+                    </div>
+                </div>
+                <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-fuchsia-600 to-purple-600 rounded-full transition-all" style="width: {{ profile_progress }}%;"></div>
+                </div>
+            </div>
+
+            {% if next_step %}
+            <a href="{% url next_step.url %}" class="px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition flex items-center justify-center gap-2">
+                <i class="fas {{ next_step.icon }}"></i> Completar: {{ next_step.label }}
+            </a>
+            {% else %}
+            <a href="{% url 'ad_create' %}" class="px-6 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition flex items-center justify-center gap-2">
+                <i class="fas fa-check-circle"></i> Perfil listo
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-6">
+            {% for item in checklist %}
+            <a href="{% url item.url %}" class="flex items-center gap-3 rounded-xl border px-4 py-3 transition {% if item.done %}border-green-100 bg-green-50 text-green-700{% else %}border-slate-100 bg-slate-50 text-slate-500 hover:border-fuchsia-200 hover:bg-fuchsia-50{% endif %}">
+                <span class="w-9 h-9 rounded-full flex items-center justify-center {% if item.done %}bg-green-100{% else %}bg-white{% endif %}">
+                    {% if item.done %}
+                    <i class="fas fa-check text-green-600"></i>
+                    {% else %}
+                    <i class="fas {{ item.icon }}"></i>
+                    {% endif %}
+                </span>
+                <span class="text-sm font-bold leading-tight">{{ item.label }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+            <div class="w-16 h-16 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-2xl">
+                <i class="fas fa-eye"></i>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm font-medium">Visitas a tu Perfil</p>
+                <h3 class="text-4xl font-bold">{{ visits }}</h3>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+            <div class="w-16 h-16 rounded-full bg-fuchsia-100 text-fuchsia-600 flex items-center justify-center text-2xl">
+                <i class="fas fa-coins"></i>
+            </div>
+            <div>
+                <p class="text-gray-500 text-sm font-medium">Mis Tangas</p>
+                <h3 class="text-4xl font-bold">{{ user.tangas_balance }} T</h3>
+            </div>
+        </div>
+    </div>
+
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-10">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h2 class="text-xl font-bold text-slate-900">Clientes que te marcaron como favorita</h2>
+                <p class="text-sm text-slate-500">Solo veras perfiles de clientes que guardaron alguno de tus anuncios como favorito.</p>
+            </div>
+            <a href="{% url 'professional_favorite_clients' %}" class="px-5 py-3 rounded-xl bg-fuchsia-50 text-fuchsia-700 font-bold text-sm text-center">
+                Ver clientes
+            </a>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+            {% for favorite in recent_admirers %}
+            <article class="rounded-2xl bg-slate-50 border border-slate-100 p-3 flex items-center gap-3">
+                {% if favorite.user.profile.avatar %}
+                <img src="{{ favorite.user.profile.avatar.url }}" class="h-12 w-12 rounded-xl object-cover" alt="{{ favorite.user.username }}">
+                {% else %}
+                <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-slate-300">
+                    <i class="fas fa-user"></i>
+                </span>
+                {% endif %}
+                <div class="min-w-0">
+                    <h3 class="font-bold text-slate-900 truncate">{{ favorite.user.username }}</h3>
+                    <p class="text-xs text-slate-500 truncate">{{ favorite.ad.title }}</p>
+                </div>
+            </article>
+            {% empty %}
+            <div class="sm:col-span-2 lg:col-span-4 rounded-2xl border border-dashed border-slate-200 p-5 text-center text-sm text-slate-400">
+                Todavia ningun cliente ha marcado tus anuncios como favoritos.
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+            <h2 class="text-xl font-bold">Mis Anuncios</h2>
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-400">{{ services.count }} Anuncios</span>
+                <a href="{% url 'ad_create' %}" class="text-sm font-bold text-fuchsia-600 hover:text-fuchsia-700">
+                    <i class="fas fa-plus mr-1"></i> Crear
+                </a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4 sm:p-6">
+            {% for ad in services %}
+            <article class="border border-gray-100 rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-md transition">
+                <div class="relative aspect-[4/3] bg-gray-100">
+                    {% with cover=ad.cover_image %}
+                    {% if cover %}
+                    <img src="{{ cover.image.url }}" class="w-full h-full object-cover" alt="{{ ad.title }}">
+                    {% else %}
+                    <div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">
+                        <i class="fas fa-image text-3xl"></i>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+
+                    {% if ad.status == 'ACTIVE' %}
+                    <span class="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 shadow-sm">ACTIVO</span>
+                    {% elif ad.status == 'CERRADO' %}
+                    <span class="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 shadow-sm">CERRADO</span>
+                    {% else %}
+                    <span class="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 shadow-sm">{{ ad.get_status_display }}</span>
+                    {% endif %}
+
+                    <span class="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold bg-white/95 text-fuchsia-600 shadow-sm">
+                        {{ ad.price_tangas }} T
+                    </span>
+                </div>
+
+                <div class="p-4">
+                    <h3 class="font-bold text-gray-900 text-lg leading-tight">{{ ad.title }}</h3>
+                    <p class="text-sm text-gray-500 mt-1 flex items-center gap-2">
+                        <i class="fas fa-map-marker-alt text-fuchsia-500"></i>
+                        {{ ad.owner.profile.get_zone_display|default:"-" }}
+                    </p>
+                    <p class="text-xs text-fuchsia-600 font-bold mt-2">
+                        {{ ad.promotion_product.name|default:"Basico" }}
+                    </p>
+                    <p class="text-sm text-gray-500 mt-3 line-clamp-2 min-h-[2.5rem]">
+                        {{ ad.public_description|default:"Sin descripcion publica."|truncatechars:110 }}
+                    </p>
+
+                    <div class="grid grid-cols-3 gap-2 mt-4">
+                        <a href="{% url 'ad_detail' ad.id %}" target="_blank" class="h-11 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-sm">
+                            <i class="fas fa-eye mr-2"></i> Ver
+                        </a>
+                        <a href="{% url 'ad_edit' ad.id %}" class="h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">
+                            <i class="fas fa-pencil-alt mr-2"></i> Editar
+                        </a>
+                        <form method="post" action="{% url 'ad_delete' ad.id %}" class="contents" onsubmit="return confirm('Seguro que quieres eliminar este anuncio? Ira a la papelera.');">
+                            {% csrf_token %}
+                            <button type="submit" class="h-11 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-bold text-sm">
+                                <i class="fas fa-trash mr-2"></i> Borrar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </article>
+            {% empty %}
+            <div class="md:col-span-2 xl:col-span-3 px-6 py-10 text-center text-gray-400 border border-dashed border-gray-200 rounded-2xl">
+                No tienes anuncios creados.
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

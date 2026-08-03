@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-8 sm:py-10">
+    <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
+        <div>
+            <p class="text-sm font-bold uppercase tracking-widest text-fuchsia-600">Superadmin</p>
+            <h1 class="mt-2 text-3xl sm:text-4xl font-serif font-bold text-slate-900">Anuncios</h1>
+            <p class="mt-2 text-slate-500">Revisa, abre y edita cualquier anuncio sin salir del panel visual.</p>
+        </div>
+        <a href="{% url 'control_panel' %}" class="h-11 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold flex items-center justify-center gap-2">
+            <i class="fas fa-arrow-left"></i> Panel
+        </a>
+    </header>
+
+    <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-white border border-slate-100 p-4 rounded-lg shadow-sm mb-6">
+        <label class="md:col-span-2">
+            <span class="sr-only">Buscar anuncio</span>
+            <input type="search" name="q" value="{{ query }}" placeholder="Titulo, profesional o texto" class="w-full h-12 px-4 border rounded-lg">
+        </label>
+        <select name="owner" class="h-12 px-4 border rounded-lg bg-white">
+            <option value="">Todas las profesionales</option>
+            {% for owner in owners %}
+            <option value="{{ owner.id }}" {% if owner_id == owner.id %}selected{% endif %}>{{ owner.username }}</option>
+            {% endfor %}
+        </select>
+        <select name="status" class="h-12 px-4 border rounded-lg bg-white">
+            <option value="">Todos los estados</option>
+            <option value="ACTIVE" {% if status == 'ACTIVE' %}selected{% endif %}>Activos</option>
+            <option value="CERRADO" {% if status == 'CERRADO' %}selected{% endif %}>Cerrados</option>
+        </select>
+        <div class="md:col-span-4 flex flex-wrap gap-2">
+            <button class="h-11 px-5 rounded-lg bg-slate-900 text-white font-bold"><i class="fas fa-search mr-2"></i>Filtrar</button>
+            {% if query or owner_id or status %}
+            <a href="{% url 'control_ads' %}" class="h-11 px-5 rounded-lg bg-slate-100 text-slate-700 font-bold flex items-center">Limpiar</a>
+            {% endif %}
+        </div>
+    </form>
+
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-slate-900">{{ ads_count }} anuncios</h2>
+    </div>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {% for ad in ads %}
+        <article class="bg-white border border-slate-100 rounded-lg overflow-hidden shadow-sm">
+            <div class="h-48 bg-slate-100 relative">
+                {% with cover=ad.cover_image %}
+                {% if cover %}
+                <img src="{{ cover.image.url }}" class="w-full h-full object-cover" alt="{{ ad.title }}">
+                {% else %}
+                <div class="w-full h-full flex items-center justify-center text-slate-300"><i class="fas fa-image text-4xl"></i></div>
+                {% endif %}
+                {% endwith %}
+                <span class="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold {% if ad.status == 'ACTIVE' %}bg-emerald-100 text-emerald-800{% else %}bg-slate-200 text-slate-700{% endif %}">
+                    {{ ad.get_status_display }}
+                </span>
+            </div>
+            <div class="p-4">
+                <h3 class="font-bold text-slate-900 truncate">{{ ad.title }}</h3>
+                <a href="{% url 'control_user_detail' ad.owner.id %}" class="text-sm text-fuchsia-700 font-bold">{{ ad.owner.username }}</a>
+                <div class="grid grid-cols-3 gap-2 mt-4 text-center text-xs">
+                    <div class="bg-slate-50 rounded-lg p-2"><strong class="block text-base">{{ ad.gallery.count }}</strong>Fotos</div>
+                    <div class="bg-slate-50 rounded-lg p-2"><strong class="block text-base">{{ ad.services.count }}</strong>Servicios</div>
+                    <div class="bg-slate-50 rounded-lg p-2"><strong class="block text-base">{{ ad.price_tangas }}</strong>Tangas</div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-4">
+                    <a href="{% url 'control_ad_detail' ad.id %}" class="h-11 rounded-lg bg-slate-900 text-white font-bold flex items-center justify-center">
+                        <i class="fas fa-pen mr-2"></i>Editar
+                    </a>
+                    <a href="{% url 'ad_detail' ad.id %}" target="_blank" class="h-11 rounded-lg border border-slate-200 text-slate-700 font-bold flex items-center justify-center">
+                        <i class="fas fa-eye mr-2"></i>Ver
+                    </a>
+                </div>
+            </div>
+        </article>
+        {% empty %}
+        <div class="md:col-span-2 xl:col-span-3 bg-white border border-dashed border-slate-200 rounded-lg p-12 text-center text-slate-400">
+            No hay anuncios con estos filtros.
+        </div>
+        {% endfor %}
+    </section>
+</div>
+{% endblock %}

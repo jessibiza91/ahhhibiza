@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-8 sm:py-10">
+    <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-5 mb-6">
+        <div>
+            <p class="text-sm font-bold uppercase tracking-widest text-rose-600">Superadmin</p>
+            <h1 class="text-3xl sm:text-4xl font-serif font-bold text-slate-900 mt-2">Papelera</h1>
+            <p class="text-slate-500 mt-2">Restaura contenido retirado o eliminalo definitivamente. Los anuncios restaurados quedan cerrados hasta su revision.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'control_panel' %}" class="h-11 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold flex items-center gap-2">
+                <i class="fas fa-arrow-left"></i> Panel
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p class="text-xs uppercase font-bold tracking-wide text-slate-400">Elementos</p>
+            <p class="text-3xl font-bold text-slate-900 mt-1">{{ trash_count }}</p>
+        </div>
+        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p class="text-xs uppercase font-bold tracking-wide text-slate-400">Memoria</p>
+            <p class="text-3xl font-bold text-rose-600 mt-1">{{ trash_mb }} MB</p>
+        </div>
+        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p class="text-xs uppercase font-bold tracking-wide text-slate-400">Perfiles</p>
+            <p class="text-3xl font-bold text-slate-900 mt-1">{{ trashed_users.count }}</p>
+        </div>
+        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p class="text-xs uppercase font-bold tracking-wide text-slate-400">Anuncios</p>
+            <p class="text-3xl font-bold text-slate-900 mt-1">{{ trashed_ads.count }}</p>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <label class="flex items-center gap-3 text-sm font-bold text-slate-700">
+                <input type="checkbox" id="selectTrashAll" class="h-5 w-5 rounded text-sky-600">
+                Seleccionar todo
+            </label>
+            <div class="flex flex-wrap gap-2">
+                <button type="submit" name="action" value="restore_selected" class="h-11 px-4 rounded-lg bg-emerald-600 text-white font-bold flex items-center gap-2">
+                    <i class="fas fa-rotate-left"></i> Restaurar seleccionados
+                </button>
+                <button type="submit" name="action" value="restore_all" class="h-11 px-4 rounded-lg bg-emerald-50 text-emerald-800 font-bold border border-emerald-200">
+                    Restaurar todo
+                </button>
+                <button type="submit" name="action" value="purge_selected" class="h-11 px-4 rounded-lg bg-rose-50 text-rose-700 font-bold border border-rose-100" onclick="return confirm('Eliminar definitivamente los elementos seleccionados? Esta accion no se puede deshacer.');">
+                    Eliminar seleccionados
+                </button>
+                <button type="submit" name="action" value="purge_all" class="h-11 px-4 rounded-lg bg-rose-600 text-white font-bold" onclick="return confirm('Vaciar toda la papelera definitivamente?');">
+                    Vaciar papelera
+                </button>
+            </div>
+        </div>
+
+        <div class="space-y-5">
+            <section class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                <h2 class="text-xl font-bold text-slate-900 mb-4">Perfiles completos</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {% for user_obj in trashed_users %}
+                    <div class="rounded-lg bg-slate-50 border border-slate-100 p-4 flex items-start gap-3">
+                        <input type="checkbox" id="trash-user-{{ user_obj.id }}" name="users" value="{{ user_obj.id }}" class="trash-checkbox mt-1 h-5 w-5 rounded text-sky-600">
+                        <label for="trash-user-{{ user_obj.id }}" class="flex-1 min-w-0 cursor-pointer">
+                            <strong class="block text-slate-900">{{ user_obj.username }}</strong>
+                            <span class="block text-sm text-slate-500">{{ user_obj.get_type_display }}</span>
+                            <span class="block text-xs text-slate-400 mt-1">{{ user_obj.trashed_at }}</span>
+                        </label>
+                        <button type="submit" name="restore_user" value="{{ user_obj.id }}" class="h-9 w-9 shrink-0 rounded-full bg-emerald-100 text-emerald-700" title="Restaurar perfil">
+                            <i class="fas fa-rotate-left"></i>
+                        </button>
+                    </div>
+                    {% empty %}
+                    <p class="text-slate-400">No hay perfiles en papelera.</p>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                <h2 class="text-xl font-bold text-slate-900 mb-4">Anuncios</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {% for ad in trashed_ads %}
+                    <div class="rounded-lg bg-slate-50 border border-slate-100 p-4 flex items-start gap-3">
+                        <input type="checkbox" id="trash-ad-{{ ad.id }}" name="ads" value="{{ ad.id }}" class="trash-checkbox mt-1 h-5 w-5 rounded text-sky-600">
+                        <label for="trash-ad-{{ ad.id }}" class="flex-1 min-w-0 cursor-pointer">
+                            <strong class="block text-slate-900">{{ ad.title }}</strong>
+                            <span class="block text-sm text-slate-500">{{ ad.owner.username }}</span>
+                            <span class="block text-xs text-slate-400 mt-1">{{ ad.trashed_at }}</span>
+                        </label>
+                        <button type="submit" name="restore_ad" value="{{ ad.id }}" class="h-9 w-9 shrink-0 rounded-full bg-emerald-100 text-emerald-700" title="Restaurar anuncio cerrado">
+                            <i class="fas fa-rotate-left"></i>
+                        </button>
+                    </div>
+                    {% empty %}
+                    <p class="text-slate-400">No hay anuncios en papelera.</p>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                <h2 class="text-xl font-bold text-slate-900 mb-4">Material de galeria interna</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {% for media in trashed_profile_media %}
+                    <div class="rounded-lg bg-slate-50 border border-slate-100 p-2">
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                        <input type="checkbox" name="profile_media" value="{{ media.id }}" class="trash-checkbox h-5 w-5 rounded text-rose-600 mb-2">
+                            <button type="submit" name="restore_profile_media" value="{{ media.id }}" class="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700" title="Restaurar material">
+                                <i class="fas fa-rotate-left text-xs"></i>
+                            </button>
+                        </div>
+                        <span class="block aspect-square rounded-xl bg-white overflow-hidden">
+                            {% if media.is_video %}
+                            <video src="{{ media.file.url }}" class="w-full h-full object-cover"></video>
+                            {% else %}
+                            <img src="{{ media.file.url }}" class="w-full h-full object-cover" alt="Media papelera">
+                            {% endif %}
+                        </span>
+                        <span class="block text-xs text-slate-500 mt-2 truncate">{{ media.profile.user.username }}</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-slate-400">No hay material interno en papelera.</p>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                <h2 class="text-xl font-bold text-slate-900 mb-4">Imagenes de anuncios</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {% for image in trashed_ad_images %}
+                    <div class="rounded-lg bg-slate-50 border border-slate-100 p-2">
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <input type="checkbox" name="ad_images" value="{{ image.id }}" class="trash-checkbox h-5 w-5 rounded text-sky-600">
+                            <button type="submit" name="restore_ad_image" value="{{ image.id }}" class="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700" title="Restaurar imagen">
+                                <i class="fas fa-rotate-left text-xs"></i>
+                            </button>
+                        </div>
+                        <span class="block aspect-square rounded-xl bg-white overflow-hidden relative">
+                            <img src="{{ image.image.url }}" class="w-full h-full object-cover" alt="Imagen papelera">
+                            {% if image.is_private %}<span class="absolute inset-0 flex items-center justify-center text-white font-bold text-xs">HOT</span>{% endif %}
+                        </span>
+                        <span class="block text-xs text-slate-500 mt-2 truncate">{{ image.ad.title }}</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-slate-400">No hay imagenes de anuncios en papelera.</p>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const selectAll = document.getElementById('selectTrashAll');
+        if (selectAll) {
+            selectAll.addEventListener('change', function () {
+                document.querySelectorAll('.trash-checkbox').forEach((checkbox) => {
+                    checkbox.checked = selectAll.checked;
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

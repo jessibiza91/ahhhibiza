@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="hero">
+    <h1 class="text-4xl md:text-6xl font-bold mb-4">
+        Luxury & <span class="text-gradient">Passion</span><br>in Ibiza
+    </h1>
+    <p class="text-lg md:text-xl text-slate-600 mb-7 max-w-2xl px-4">
+        Relax y diversion en la guia mas exclusiva de la isla.
+    </p>
+
+    <form method="get" action="{% url 'home' %}" class="home-filters" aria-label="Buscar profesionales">
+        <label class="filter-field filter-search">
+            <span class="sr-only">Texto de busqueda</span>
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <input type="search" name="q" value="{{ query }}" placeholder="Nombre, servicio o palabra">
+        </label>
+
+        <label class="filter-field">
+            <span class="sr-only">Zona</span>
+            <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+            <select name="zone">
+                <option value="">Toda Ibiza</option>
+                {% for zone_value, zone_label in zones %}
+                <option value="{{ zone_value }}" {% if selected_zone == zone_value %}selected{% endif %}>
+                    {{ zone_label }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <button type="submit" class="filter-submit">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <span>Buscar</span>
+        </button>
+
+        {% if filters_active %}
+        <a href="{% url 'home' %}" class="filter-clear" title="Quitar filtros">
+            <i class="fas fa-times" aria-hidden="true"></i>
+            <span>Limpiar</span>
+        </a>
+        {% endif %}
+    </form>
+</section>
+
+<section class="container pb-16 pt-8">
+    <div class="flex justify-between items-end mb-8 border-b border-gray-200 pb-5">
+        <div>
+            <h2 class="text-3xl font-serif">{% if filters_active %}Resultados{% else %}Ultimos perfiles{% endif %}</h2>
+            {% if filters_active %}
+            <p class="text-sm text-gray-500 mt-1">{{ services|length }} profesionales encontrados</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid-ads">
+        {% for ad in services %}
+        <article class="card">
+            <div class="relative">
+                {% with cover=ad.cover_image %}
+                {% if cover %}
+                <img src="{{ cover.image.url }}" alt="{{ ad.title }}" class="card-img">
+                {% else %}
+                <div class="card-img flex items-center justify-center text-gray-300">
+                    <i class="fas fa-image text-4xl"></i>
+                </div>
+                {% endif %}
+                {% endwith %}
+                {% if user.is_authenticated and user.type == 'CLIENT' %}
+                <form method="post" action="{% url 'toggle_favorite_ad' ad.id %}" class="absolute right-3 top-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="h-11 w-11 rounded-full bg-white/95 text-fuchsia-600 shadow-lg hover:bg-fuchsia-50 transition" title="{% if ad.id in favorite_ids %}Quitar de favoritas{% else %}Guardar favorita{% endif %}">
+                        <i class="{% if ad.id in favorite_ids %}fas{% else %}far{% endif %} fa-heart"></i>
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+
+            <div class="card-body">
+                <div class="card-zone">
+                    <i class="fas fa-map-marker-alt text-purple-500"></i>
+                    <span>{{ ad.owner.profile.get_zone_display|default:"Ibiza" }}</span>
+                </div>
+
+                <h3 class="card-title">{{ ad.title }}</h3>
+                <p class="text-gray-500 text-sm line-clamp-2 mb-6">
+                    {{ ad.public_description|truncatechars:80 }}
+                </p>
+
+                <a href="{% url 'ad_detail' ad.id %}" class="btn-outline w-full text-center block">Ver Perfil</a>
+            </div>
+        </article>
+        {% empty %}
+        <div class="col-span-3 text-center py-20 text-gray-400">
+            <i class="fas fa-image text-6xl mb-4 text-gray-200"></i>
+            <p>{% if filters_active %}No hay profesionales que coincidan con estos filtros.{% else %}Aun no hay anuncios activos.{% endif %}</p>
+            {% if filters_active %}
+            <a href="{% url 'home' %}" class="btn-outline inline-block mt-5">Ver todos los perfiles</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

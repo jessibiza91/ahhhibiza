@@ -1,0 +1,326 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-8 sm:py-10">
+    <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-5 mb-6">
+        <div>
+            <p class="text-sm font-bold uppercase tracking-widest text-fuchsia-600">Control de anuncio</p>
+            <h1 class="text-3xl sm:text-4xl font-serif font-bold text-slate-900 mt-2">{% if is_create %}Crear anuncio{% else %}{{ ad.title }}{% endif %}</h1>
+            <p class="text-slate-500 mt-2">Propietario: <strong>{{ owner.username }}</strong> · Revision editorial y legal del contenido.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'control_user_detail' owner.id %}" class="h-11 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold flex items-center gap-2">
+                <i class="fas fa-arrow-left"></i> Usuario
+            </a>
+            {% if ad.pk %}
+            <a href="{% url 'ad_detail' ad.id %}" target="_blank" class="h-11 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold flex items-center gap-2">
+                <i class="fas fa-eye"></i> Ver publico
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if saved %}
+    <div class="mb-5 rounded-2xl border border-green-100 bg-green-50 p-4 text-sm font-bold text-green-700">
+        Anuncio actualizado correctamente.
+    </div>
+    {% endif %}
+
+    {% if form.errors %}
+    <div class="mb-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+        Revisa los campos marcados antes de guardar.
+    </div>
+    {% endif %}
+
+    <section class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+        <div class="flex items-start gap-3">
+            <span class="w-11 h-11 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-shield-alt"></i>
+            </span>
+            <div>
+                <h2 class="text-xl font-bold text-amber-950">Intervencion sobre anuncio</h2>
+                <p class="text-sm text-amber-800 mt-1">Esta pantalla permite a Patricia actuar sobre el anuncio de {{ owner.username }} para asistencia operativa o moderacion legal del contenido.</p>
+            </div>
+        </div>
+    </section>
+
+    <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
+        {% csrf_token %}
+        <div class="space-y-5">
+            <section class="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm">
+                <div class="flex items-center gap-3 mb-5">
+                    <span class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+                        <i class="fas fa-sliders-h"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Datos del anuncio</h2>
+                        <p class="text-sm text-slate-500">Titulo, estado y consumo interno de Tangas.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Titulo</label>
+                        {{ form.title }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Estado</label>
+                        {{ form.status }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Tangas promocion</label>
+                        {{ form.price_tangas }}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Producto de promocion</label>
+                        {{ form.promotion_product }}
+                        <p class="text-xs text-slate-400 mt-2">Patricia puede ajustar el producto y, si lo necesita, el coste aplicado al anuncio.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-blue-100 bg-white p-5 sm:p-6 shadow-sm">
+                <div class="flex items-center gap-3 mb-5">
+                    <span class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <i class="fas fa-globe"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Contenido publico</h2>
+                        <p class="text-sm text-slate-500">Visible para cualquier visitante. Debe ser especialmente cuidadoso.</p>
+                    </div>
+                </div>
+                <label class="block text-sm font-bold text-slate-700 mb-2">Descripcion publica</label>
+                {{ form.public_description }}
+                <div class="mt-5">
+                    <label for="id_public_media" class="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/60 p-5 text-center hover:border-blue-400 transition">
+                        <i class="fas fa-cloud-upload-alt text-3xl text-blue-500"></i>
+                        <span class="mt-2 font-bold text-blue-800">Anadir fotos publicas</span>
+                        <span class="text-xs text-blue-600">Se guardan al pulsar Guardar</span>
+                    </label>
+                    <div class="sr-only">{{ form.public_media }}</div>
+                    <p id="public-files-status" class="text-xs text-slate-500 mt-2"></p>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-5">
+                    {% for img in public_images %}
+                    <div class="thumb-container" id="img-{{ img.id }}">
+                        <img src="{{ img.image.url }}" class="w-full h-full object-cover" alt="Imagen publica">
+                        <button type="button" class="delete-overlay btn-delete-img" data-id="{{ img.id }}" aria-label="Eliminar imagen publica">
+                            <i class="fas fa-times pointer-events-none"></i>
+                        </button>
+                    </div>
+                    {% empty %}
+                    <div class="col-span-full rounded-2xl border border-dashed border-slate-200 p-8 text-center text-slate-400">Sin imagenes publicas.</div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-fuchsia-100 bg-fuchsia-50 p-5 sm:p-6 shadow-sm">
+                <div class="flex items-center gap-3 mb-5">
+                    <span class="w-10 h-10 rounded-xl bg-white text-fuchsia-600 flex items-center justify-center">
+                        <i class="fas fa-lock"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-xl font-bold text-fuchsia-950">Contenido HOT privado</h2>
+                        <p class="text-sm text-fuchsia-700">Solo usuarios registrados. Aun asi debe cumplir criterios legales.</p>
+                    </div>
+                </div>
+                <label class="block text-sm font-bold text-fuchsia-950 mb-2">Descripcion privada</label>
+                {{ form.hot_description }}
+                <div class="mt-5">
+                    <label for="id_hot_media" class="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-fuchsia-200 bg-white/70 p-5 text-center hover:border-fuchsia-400 transition">
+                        <i class="fas fa-lock text-3xl text-fuchsia-500"></i>
+                        <span class="mt-2 font-bold text-fuchsia-900">Anadir fotos privadas</span>
+                        <span class="text-xs text-fuchsia-700">Se guardan al pulsar Guardar</span>
+                    </label>
+                    <div class="sr-only">{{ form.hot_media }}</div>
+                    <p id="hot-files-status" class="text-xs text-fuchsia-700 mt-2"></p>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-5">
+                    {% for img in private_images %}
+                    <div class="thumb-container border-2 border-fuchsia-300" id="img-{{ img.id }}">
+                        <img src="{{ img.image.url }}" class="w-full h-full object-cover blur-[2px] hover:blur-none transition" alt="Imagen privada">
+                        <span class="absolute inset-0 flex items-center justify-center pointer-events-none text-white font-bold opacity-70">HOT</span>
+                        <button type="button" class="delete-overlay btn-delete-img" data-id="{{ img.id }}" aria-label="Eliminar imagen privada">
+                            <i class="fas fa-times pointer-events-none"></i>
+                        </button>
+                    </div>
+                    {% empty %}
+                    <div class="col-span-full rounded-2xl border border-dashed border-fuchsia-200 p-8 text-center text-fuchsia-700">Sin imagenes privadas.</div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-amber-100 bg-white p-5 sm:p-6 shadow-sm">
+                <div class="flex items-start gap-3 mb-5">
+                    <span class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                        <i class="fas fa-folder-open"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Usar galeria interna</h2>
+                        <p class="text-sm text-slate-500">Material ya disponible del profesional. Puedes incorporarlo al anuncio como publico o HOT.</p>
+                    </div>
+                </div>
+                {% if is_create %}
+                <div class="rounded-2xl border border-dashed border-amber-200 bg-amber-50 p-6 text-center text-amber-800">
+                    Guarda primero el anuncio para poder incorporar material de la galeria interna.
+                </div>
+                {% else %}
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    {% for media in owner_gallery %}
+                    <article class="rounded-2xl border border-slate-100 bg-slate-50 p-2">
+                        <div class="aspect-square rounded-xl overflow-hidden bg-white">
+                            <img src="{{ media.file.url }}" class="w-full h-full object-cover" alt="Material interno">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mt-2">
+                            <button type="submit" name="action" value="attach_profile_media_public" class="h-9 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold">
+                                Publico
+                            </button>
+                            <button type="submit" name="action" value="attach_profile_media_private" class="h-9 rounded-lg bg-fuchsia-50 text-fuchsia-700 text-xs font-bold">
+                                HOT
+                            </button>
+                        </div>
+                        <button type="submit" name="media_id" value="{{ media.id }}" class="sr-only" aria-hidden="true" tabindex="-1"></button>
+                        <input type="hidden" name="media_id_fallback_{{ media.id }}" value="{{ media.id }}">
+                    </article>
+                    {% empty %}
+                    <div class="col-span-full rounded-2xl border border-dashed border-slate-200 p-8 text-center text-slate-400">
+                        La galeria interna no tiene fotos disponibles.
+                    </div>
+                    {% endfor %}
+                </div>
+                <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                        document.querySelectorAll('button[value="attach_profile_media_public"], button[value="attach_profile_media_private"]').forEach((button) => {
+                            button.addEventListener('click', function () {
+                                const card = button.closest('article');
+                                const hidden = card ? card.querySelector('input[type="hidden"]') : null;
+                                if (hidden) {
+                                    let active = document.getElementById('active-profile-media-id');
+                                    if (!active) {
+                                        active = document.createElement('input');
+                                        active.type = 'hidden';
+                                        active.name = 'media_id';
+                                        active.id = 'active-profile-media-id';
+                                        button.form.appendChild(active);
+                                    }
+                                    active.value = hidden.value;
+                                }
+                            });
+                        });
+                    });
+                </script>
+                {% endif %}
+            </section>
+
+            <section class="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm">
+                <div class="flex items-center gap-3 mb-5">
+                    <span class="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+                        <i class="fas fa-tags"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Servicios</h2>
+                        <p class="text-sm text-slate-500">Etiquetas visibles para busqueda y filtrado.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {% for checkbox in form.services %}
+                    <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl bg-slate-50 hover:bg-fuchsia-50 cursor-pointer transition">
+                        {{ checkbox.tag }}
+                        <span class="text-slate-700 font-bold text-sm">{{ checkbox.choice_label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+
+        <aside class="space-y-4 xl:sticky xl:top-28 xl:self-start">
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="aspect-[4/3] bg-slate-100 relative">
+                    {% if ad.pk and ad.cover_image %}
+                    <img src="{{ ad.cover_image.image.url }}" class="w-full h-full object-cover" alt="Vista previa">
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center text-slate-300">
+                        <i class="fas fa-image text-5xl"></i>
+                    </div>
+                    {% endif %}
+                    <span class="absolute top-3 left-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-slate-700">Revision</span>
+                </div>
+                <div class="p-5">
+                    <h2 class="text-lg font-bold text-slate-900">{% if is_create %}Nuevo anuncio{% else %}{{ ad.title }}{% endif %}</h2>
+                    <p class="text-sm text-slate-500 mt-2">{{ ad.public_description|default:"Sin descripcion publica."|truncatechars:130 }}</p>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-amber-100 bg-amber-50 p-5 shadow-sm">
+                <h2 class="text-lg font-bold text-amber-900">Revision legal</h2>
+                <p class="text-sm text-amber-800 mt-2">Usa esta pantalla para retirar material inadecuado, pausar el anuncio o corregir textos antes de que afecten a la plataforma.</p>
+            </div>
+
+            <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                <h2 class="text-lg font-bold text-slate-900">Guardar</h2>
+                <div class="grid gap-3 mt-5">
+                    <button type="submit" name="save_and_preview" value="1" class="h-12 rounded-xl bg-slate-900 text-white font-bold">
+                        <i class="fas fa-eye mr-2"></i> Guardar y ver
+                    </button>
+                    <button type="submit" class="h-12 rounded-xl bg-fuchsia-600 text-white font-bold">
+                        <i class="fas fa-save mr-2"></i> Guardar cambios
+                    </button>
+                    {% if ad.pk %}
+                    <button type="submit" name="action" value="delete_ad" class="h-12 rounded-xl bg-rose-50 text-rose-700 font-bold border border-rose-100" onclick="return confirm('Eliminar este anuncio completo? Esta accion no se puede deshacer.');">
+                        <i class="fas fa-trash mr-2"></i> Borrar anuncio
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+
+        <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 p-3 xl:hidden">
+            <button type="submit" class="w-full h-12 rounded-xl bg-fuchsia-600 text-white font-bold">
+                <i class="fas fa-save mr-2"></i> Guardar cambios
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        function updateFileStatus(input, statusId, label) {
+            const status = document.getElementById(statusId);
+            if (!status) return;
+            const count = input.files.length;
+            status.textContent = count ? `${count} archivo(s) preparados para subir como ${label}.` : '';
+        }
+
+        const publicMedia = document.getElementById('id_public_media');
+        const hotMedia = document.getElementById('id_hot_media');
+        if (publicMedia) publicMedia.addEventListener('change', function () { updateFileStatus(publicMedia, 'public-files-status', 'publicos'); });
+        if (hotMedia) hotMedia.addEventListener('change', function () { updateFileStatus(hotMedia, 'hot-files-status', 'privados'); });
+
+        document.querySelectorAll('.btn-delete-img').forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const imgId = this.getAttribute('data-id');
+                if (!imgId) return;
+                if (confirm('Retirar esta imagen del anuncio? Ira a la papelera.')) {
+                    fetch(`/ads/imagen/delete/${imgId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                const container = document.getElementById(`img-${imgId}`);
+                                if (container) container.remove();
+                            } else {
+                                alert(data.message || 'No se pudo eliminar la imagen.');
+                            }
+                        })
+                        .catch(() => alert('Error de conexion.'));
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

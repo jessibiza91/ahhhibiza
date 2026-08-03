@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-lg mx-auto py-12">
+    <div class="bg-[#e5e7eb] p-8 md:p-10 rounded-2xl shadow-xl shadow-fuchsia-500/5 border border-slate-200">
+        <div class="text-center mb-8">
+            <h2 class="font-serif text-3xl font-bold text-slate-900 mb-2">Registro {{ user_type }}</h2>
+            <p class="text-slate-500">Completa tus datos para acceder.</p>
+        </div>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            {% for field in form %}
+            <div class="space-y-2">
+                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700">
+                    {{ field.label }}
+                </label>
+                {{ field }}
+                {% if field.help_text %}
+                <p class="text-slate-400 text-xs">{{ field.help_text }}</p>
+                {% endif %}
+                {% for error in field.errors %}
+                <p class="text-red-500 text-xs">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            <button type="submit"
+                class="w-full py-3 px-4 bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white font-bold rounded-lg transition transform hover:scale-[1.02] shadow-lg">
+                Completar Registro
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

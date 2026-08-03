@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-8 sm:py-10">
+    <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-5 mb-6">
+        <div>
+            <p class="text-sm font-bold uppercase tracking-widest text-fuchsia-600">Superadmin</p>
+            <h1 class="text-3xl sm:text-4xl font-serif font-bold text-slate-900 mt-2">Profesionales</h1>
+            <p class="text-slate-500 mt-2">Control visual de perfiles, contacto, anuncios, materiales y saldo interno.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'control_panel' %}" class="h-11 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold flex items-center gap-2">
+                <i class="fas fa-arrow-left"></i> Panel
+            </a>
+            <a href="{% url 'control_trash' %}" class="h-11 px-4 rounded-xl border border-rose-100 bg-rose-50 text-rose-700 font-bold flex items-center gap-2">
+                <i class="fas fa-trash"></i> Papelera
+            </a>
+            <button type="button" data-view-button="cards" class="view-button h-11 px-4 rounded-xl border border-slate-200 bg-slate-900 text-white font-bold flex items-center gap-2">
+                <i class="fas fa-th-large"></i> Tarjetas
+            </button>
+            <button type="button" data-view-button="list" class="view-button h-11 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold flex items-center gap-2">
+                <i class="fas fa-list"></i> Lista
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p class="text-xs uppercase font-bold tracking-wide text-slate-400">Total</p>
+            <p class="text-3xl font-bold text-slate-900 mt-1">{{ professionals_count }}</p>
+        </div>
+        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p class="text-xs uppercase font-bold tracking-wide text-slate-400">Activos</p>
+            <p class="text-3xl font-bold text-green-600 mt-1">{{ professional_cards|length }}</p>
+        </div>
+        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p class="text-xs uppercase font-bold tracking-wide text-slate-400">Vista</p>
+            <p class="text-sm font-bold text-slate-700 mt-2">Tarjeta o lista</p>
+        </div>
+        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p class="text-xs uppercase font-bold tracking-wide text-slate-400">Herramientas</p>
+            <a href="{% url 'control_ads' %}" class="text-sm font-bold text-fuchsia-600 mt-2 inline-flex">Ver todos los anuncios</a>
+        </div>
+    </div>
+
+    <form method="post" action="{% url 'control_bulk_trash_users' %}" onsubmit="return confirm('Enviar los profesionales seleccionados a la papelera?');">
+        {% csrf_token %}
+        <div class="mb-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <label class="flex items-center gap-3 text-sm font-bold text-slate-700">
+                <input type="checkbox" id="selectAllUsers" class="h-5 w-5 rounded text-fuchsia-600">
+                Seleccionar todo lo visible
+            </label>
+            <button type="submit" class="h-11 px-4 rounded-xl bg-rose-50 text-rose-700 font-bold border border-rose-100">
+                <i class="fas fa-trash mr-2"></i> Enviar seleccionados a papelera
+            </button>
+        </div>
+
+    <section id="cardsView" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {% for item in professional_cards %}
+        <article class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <label class="flex items-center gap-2 mb-3 text-xs font-bold text-slate-500">
+                <input type="checkbox" name="selected_users" value="{{ item.user.id }}" class="select-user-checkbox h-5 w-5 rounded text-fuchsia-600">
+                Seleccionar
+            </label>
+            <div class="flex gap-4">
+                {% if item.profile.avatar %}
+                <img src="{{ item.profile.avatar.url }}" alt="{{ item.user.username }}" class="w-20 h-20 rounded-2xl object-cover bg-slate-100">
+                {% else %}
+                <div class="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-300">
+                    <i class="fas fa-user text-3xl"></i>
+                </div>
+                {% endif %}
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <h2 class="font-bold text-slate-900 truncate">{{ item.user.username }}</h2>
+                            <p class="text-sm text-slate-500 truncate">{{ item.profile.get_zone_display|default:"Sin zona" }}</p>
+                        </div>
+                        {% if item.user.is_active %}
+                        <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">Activo</span>
+                        {% else %}
+                        <span class="px-2 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-bold">Inactivo</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex flex-wrap gap-2 mt-3">
+                        {% if item.has_contact %}
+                        <span class="px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold">Contacto</span>
+                        {% else %}
+                        <span class="px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 text-xs font-bold">Sin contacto</span>
+                        {% endif %}
+                        {% if item.has_profile %}
+                        <span class="px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold">Perfil OK</span>
+                        {% else %}
+                        <span class="px-2 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">Perfil incompleto</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-2 mt-4 text-center">
+                <div class="rounded-xl bg-slate-50 p-2">
+                    <p class="text-lg font-bold text-slate-900">{{ item.active_ads_count }}</p>
+                    <p class="text-xs text-slate-500">Activos</p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-2">
+                    <p class="text-lg font-bold text-slate-900">{{ item.closed_ads_count }}</p>
+                    <p class="text-xs text-slate-500">Cerrados</p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-2">
+                    <p class="text-lg font-bold text-slate-900">{{ item.media_count }}</p>
+                    <p class="text-xs text-slate-500">Media</p>
+                </div>
+                <div class="rounded-xl bg-slate-50 p-2">
+                    <p class="text-lg font-bold text-fuchsia-600">{{ item.user.tangas_balance }}</p>
+                    <p class="text-xs text-slate-500">Tangas</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 mt-4">
+                <a href="{% url 'control_user_detail' item.user.id %}" class="h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center text-sm font-bold">Editar</a>
+                <a href="{% url 'control_ads' %}?owner={{ item.user.id }}" class="h-10 rounded-xl bg-white text-slate-700 flex items-center justify-center text-sm font-bold border border-slate-200">Anuncios</a>
+                <a href="{% url 'control_user_detail' item.user.id %}#galeria-control" class="h-10 rounded-xl bg-white text-slate-700 flex items-center justify-center text-sm font-bold border border-slate-200">Galeria</a>
+            </div>
+        </article>
+        {% empty %}
+        <div class="md:col-span-2 xl:col-span-3 rounded-2xl bg-white border border-slate-100 p-10 text-center text-slate-400">
+            No hay profesionales registrados.
+        </div>
+        {% endfor %}
+    </section>
+
+    <section id="listView" class="hidden rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+        <div class="hidden lg:grid grid-cols-12 gap-3 px-4 py-3 bg-slate-50 text-xs uppercase font-bold tracking-wide text-slate-400">
+            <div class="col-span-4">Profesional</div>
+            <div class="col-span-2">Estado</div>
+            <div class="col-span-2">Anuncios</div>
+            <div class="col-span-2">Materiales</div>
+            <div class="col-span-2">Acciones</div>
+        </div>
+        {% for item in professional_cards %}
+        <article class="grid grid-cols-1 lg:grid-cols-12 gap-3 px-4 py-4 border-t border-slate-100 items-center">
+            <div class="lg:col-span-1">
+                <input type="checkbox" name="selected_users" value="{{ item.user.id }}" class="select-user-checkbox h-5 w-5 rounded text-fuchsia-600">
+            </div>
+            <div class="lg:col-span-3 flex items-center gap-3 min-w-0">
+                {% if item.profile.avatar %}
+                <img src="{{ item.profile.avatar.url }}" alt="{{ item.user.username }}" class="w-12 h-12 rounded-xl object-cover bg-slate-100">
+                {% else %}
+                <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
+                    <i class="fas fa-user"></i>
+                </div>
+                {% endif %}
+                <div class="min-w-0">
+                    <h2 class="font-bold text-slate-900 truncate">{{ item.user.username }}</h2>
+                    <p class="text-sm text-slate-500 truncate">{{ item.profile.get_zone_display|default:"Sin zona" }}</p>
+                </div>
+            </div>
+            <div class="lg:col-span-2 flex flex-wrap gap-2">
+                {% if item.user.is_active %}
+                <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">Activo</span>
+                {% else %}
+                <span class="px-2 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-bold">Inactivo</span>
+                {% endif %}
+                {% if item.has_contact %}
+                <span class="px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold">Contacto</span>
+                {% else %}
+                <span class="px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 text-xs font-bold">Sin contacto</span>
+                {% endif %}
+            </div>
+            <div class="lg:col-span-2 text-sm text-slate-700">
+                <strong>{{ item.active_ads_count }}</strong> activos / <strong>{{ item.closed_ads_count }}</strong> cerrados
+            </div>
+            <div class="lg:col-span-2 text-sm text-slate-700">
+                <strong>{{ item.media_count }}</strong> archivos<br>
+                <span class="text-fuchsia-600 font-bold">{{ item.user.tangas_balance }} Tangas</span>
+            </div>
+            <div class="lg:col-span-2 flex gap-2">
+                <a href="{% url 'control_user_detail' item.user.id %}" class="h-10 px-3 rounded-xl bg-slate-900 text-white flex items-center justify-center text-sm font-bold">Editar</a>
+                <a href="{% url 'control_ads' %}?owner={{ item.user.id }}" class="h-10 px-3 rounded-xl border border-slate-200 text-slate-700 flex items-center justify-center text-sm font-bold">Anuncios</a>
+            </div>
+        </article>
+        {% empty %}
+        <div class="p-10 text-center text-slate-400">No hay profesionales registrados.</div>
+        {% endfor %}
+    </section>
+    </form>
+</div>
+
+<script>
+    function setProfessionalsView(mode) {
+        const cardsView = document.getElementById('cardsView');
+        const listView = document.getElementById('listView');
+        const buttons = document.querySelectorAll('[data-view-button]');
+        const showList = mode === 'list';
+
+        cardsView.classList.toggle('hidden', showList);
+        listView.classList.toggle('hidden', !showList);
+
+        buttons.forEach((button) => {
+            const active = button.dataset.viewButton === mode;
+            button.classList.toggle('bg-slate-900', active);
+            button.classList.toggle('text-white', active);
+            button.classList.toggle('bg-white', !active);
+            button.classList.toggle('text-slate-700', !active);
+        });
+
+        localStorage.setItem('ahhh_control_professionals_view', mode);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const storedView = localStorage.getItem('ahhh_control_professionals_view') || 'cards';
+        setProfessionalsView(storedView);
+
+        document.querySelectorAll('[data-view-button]').forEach((button) => {
+            button.addEventListener('click', function () {
+                setProfessionalsView(button.dataset.viewButton);
+            });
+        });
+
+        const selectAll = document.getElementById('selectAllUsers');
+        if (selectAll) {
+            selectAll.addEventListener('change', function () {
+                document.querySelectorAll('.select-user-checkbox').forEach((checkbox) => {
+                    if (checkbox.offsetParent !== null) {
+                        checkbox.checked = selectAll.checked;
+                    }
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

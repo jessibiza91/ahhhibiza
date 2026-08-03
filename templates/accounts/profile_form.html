@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-8 lg:py-10">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8">
+            <div>
+                <p class="text-sm font-bold uppercase tracking-widest text-fuchsia-600">{% if is_client_profile %}Perfil cliente privado{% else %}Perfil profesional{% endif %}</p>
+                <h1 class="text-4xl font-serif font-bold text-slate-900 mt-2">{% if is_client_profile %}Tu presentacion privada{% else %}Tu escaparate en Ahhh! Ibiza{% endif %}</h1>
+                <p class="text-slate-500 mt-2 max-w-2xl">
+                    {% if is_client_profile %}
+                    Completa solo lo que quieras compartir. Tus datos no se publican: solo podran verlos las profesionales que marques como favoritas y Patricia para asistencia o moderacion.
+                    {% else %}
+                    Completa tu identidad, contacto y galeria. Estos datos alimentan tus anuncios y ayudan a que los clientes contacten contigo sin friccion.
+                    {% endif %}
+                </p>
+            </div>
+            <a href="{% if is_client_profile %}{% url 'client_dashboard' %}{% else %}{% url 'professional_dashboard' %}{% endif %}" class="px-5 py-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 transition flex items-center justify-center gap-2">
+                <i class="fas fa-arrow-left"></i> Volver al panel
+            </a>
+        </div>
+
+        {% if is_client_profile %}
+        <section class="mb-6 rounded-2xl border border-fuchsia-100 bg-fuchsia-50 p-5">
+            <div class="flex items-start gap-3">
+                <span class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white text-fuchsia-600">
+                    <i class="fas fa-eye-slash"></i>
+                </span>
+                <div>
+                    <h2 class="font-bold text-fuchsia-950">Privacidad del perfil cliente</h2>
+                    <p class="mt-1 text-sm text-fuchsia-800">Puedes poner un alias, una descripcion breve y fotos si quieres generar mas confianza. No aparece en la zona publica ni en buscadores internos generales; solo lo ven las profesionales que hayas marcado como favoritas.</p>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        {% if form.errors %}
+        <div class="bg-red-50 border border-red-100 text-red-600 p-4 rounded-2xl text-sm mb-6">
+            {{ form.errors }}
+        </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
+            {% csrf_token %}
+            <input type="hidden" name="action" id="form-action" value="save_profile">
+
+            <div class="space-y-6">
+                <section class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="w-10 h-10 rounded-xl bg-fuchsia-50 text-fuchsia-600 flex items-center justify-center">
+                            <i class="fas fa-id-card"></i>
+                        </span>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">{% if is_client_profile %}Identidad privada{% else %}Identidad publica{% endif %}</h2>
+                            <p class="text-sm text-slate-500">{% if is_client_profile %}Datos visibles solo para tus profesionales favoritas.{% else %}La primera impresion del perfil.{% endif %}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-6 mb-6">
+                        <div class="flex-shrink-0">
+                            {% if profile.avatar %}
+                            <img src="{{ profile.avatar.url }}" class="w-28 h-28 rounded-2xl object-cover border-4 border-slate-50 shadow">
+                            {% else %}
+                            <div class="w-28 h-28 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-300 text-4xl">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-sm font-bold text-slate-700 mb-2">Foto de perfil</label>
+                            <input type="file" name="avatar" class="w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-fuchsia-50 file:text-fuchsia-700 hover:file:bg-fuchsia-100" />
+                            <p class="text-xs text-slate-400 mt-2">{% if is_client_profile %}Puedes usar una imagen real, discreta o representativa. Maximo recomendado: 2 MB.{% else %}Usa una imagen reconocible y cuidada. Maximo recomendado: 2 MB.{% endif %}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-slate-700 mb-2">{% if is_client_profile %}Alias y presentacion{% else %}Nombre y descripcion{% endif %}</label>
+                            {{ form.bio }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">Fecha de nacimiento</label>
+                            {{ form.birth_date }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">Zona</label>
+                            {{ form.zone }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">Origen</label>
+                            {{ form.origin }}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+                            <i class="fas fa-phone"></i>
+                        </span>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Contacto directo</h2>
+                            <p class="text-sm text-slate-500">{% if is_client_profile %}Opcional. Solo se comparte con profesionales que marcas como favoritas.{% else %}Estos botones aparecen en tus anuncios cuando el dato existe.{% endif %}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="relative">
+                            <i class="fas fa-phone absolute left-4 top-3 text-green-600 z-10"></i>
+                            {{ form.phone }}
+                        </div>
+                        <div class="relative">
+                            <i class="fab fa-whatsapp absolute left-4 top-3 text-green-500 z-10"></i>
+                            {{ form.whatsapp_id }}
+                        </div>
+                        <div class="relative">
+                            <i class="fab fa-telegram absolute left-4 top-3 text-sky-500 z-10"></i>
+                            {{ form.telegram_id }}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center">
+                            <i class="fas fa-share-alt"></i>
+                        </span>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Redes sociales</h2>
+                            <p class="text-sm text-slate-500">{% if is_client_profile %}Opcional y privado para profesionales favoritas.{% else %}Opcional. Se muestran en la zona privada para usuarios registrados.{% endif %}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="relative">
+                            <i class="fab fa-instagram absolute left-4 top-3 text-pink-500 z-10"></i>
+                            {{ form.instagram_url }}
+                        </div>
+                        <div class="relative">
+                            <i class="fab fa-facebook absolute left-4 top-3 text-blue-600 z-10"></i>
+                            {{ form.facebook_url }}
+                        </div>
+                        <div class="relative">
+                            <i class="fab fa-twitter absolute left-4 top-3 text-black z-10"></i>
+                            {{ form.twitter_url }}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                        <div class="flex items-center gap-3">
+                            <span class="w-10 h-10 rounded-xl bg-fuchsia-50 text-fuchsia-600 flex items-center justify-center">
+                                <i class="fas fa-images"></i>
+                            </span>
+                            <div>
+                                <h2 class="text-xl font-bold text-slate-900">{% if is_client_profile %}Galeria privada{% else %}Galeria profesional{% endif %}</h2>
+                                <p class="text-sm text-slate-500">{% if is_client_profile %}Material privado para generar confianza con favoritas.{% else %}Fotos y videos asociados a tu perfil.{% endif %}</p>
+                            </div>
+                        </div>
+                        <p class="text-sm font-bold text-slate-500"><span class="text-fuchsia-600">{{ usage_mb }} MB</span> / 35 MB</p>
+                    </div>
+
+                    <div class="h-3 bg-slate-100 rounded-full overflow-hidden mb-5">
+                        <div class="h-full bg-gradient-to-r from-fuchsia-600 to-purple-600 rounded-full" style="width: {% widthratio usage_mb 35 100 %}%;"></div>
+                    </div>
+
+                    <div class="mb-6 p-5 bg-slate-50 rounded-2xl border border-dashed border-slate-300 hover:border-fuchsia-400 transition" id="upload-container">
+                        <label class="block mb-2 text-sm font-bold text-slate-700">Anadir fotos o videos</label>
+                        <input type="file" name="media_files" id="auto-upload-input" multiple accept="image/*,video/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer" />
+                        <p class="text-xs text-slate-400 mt-2">Se suben automaticamente al seleccionarlos. Puedes abrirlos tocando cada miniatura.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 transition-opacity duration-300" id="media-grid">
+                        {% for m in profile_media %}
+                        <div class="relative bg-white p-2 rounded-2xl shadow-sm border border-slate-200" id="media-{{ m.id }}">
+                            <div class="cursor-zoom-in" onclick="openLightbox('{{ m.file.url }}', '{% if m.is_video %}true{% else %}false{% endif %}')">
+                                {% if m.is_video %}
+                                <video src="{{ m.file.url }}" class="w-full h-48 sm:h-28 object-cover rounded-xl pointer-events-none"></video>
+                                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <i class="fas fa-play-circle text-white text-3xl opacity-80 drop-shadow-lg"></i>
+                                </div>
+                                {% else %}
+                                <img src="{{ m.file.url }}" class="w-full h-48 sm:h-28 object-cover rounded-xl">
+                                {% endif %}
+                            </div>
+                            <button type="button" class="absolute -top-2 -right-2 w-10 h-10 flex items-center justify-center cursor-pointer z-50 hover:scale-110 transition" onclick="deleteMedia('{{ m.id }}')">
+                                <span class="bg-fuchsia-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm shadow-md">x</span>
+                            </button>
+                            <p class="text-[10px] text-gray-400 mt-2 text-center">{{ m.file.size|filesizeformat }}</p>
+                        </div>
+                        {% empty %}
+                        <div class="sm:col-span-2 md:col-span-4 text-center text-slate-400 border border-dashed border-slate-200 rounded-2xl py-10">
+                            Todavia no has subido material a tu galeria.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+            </div>
+
+            <aside class="space-y-4">
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                    <h2 class="text-lg font-bold text-slate-900">Resumen</h2>
+                    <div class="space-y-3 mt-4 text-sm">
+                        <div class="flex justify-between gap-4"><span class="text-slate-500">Galeria</span><strong>{{ gallery_mb }} MB</strong></div>
+                        <div class="flex justify-between gap-4"><span class="text-slate-500">Avatar</span><strong>{{ avatar_mb }} MB</strong></div>
+                        <div class="flex justify-between gap-4"><span class="text-slate-500">Total</span><strong>{{ usage_mb }} MB</strong></div>
+                    </div>
+                </div>
+
+                <div class="bg-fuchsia-50 rounded-2xl border border-fuchsia-100 p-6">
+                    <h2 class="text-lg font-bold text-fuchsia-900">Consejo rapido</h2>
+                    <p class="text-sm text-fuchsia-800 mt-2">{% if is_client_profile %}Cuanto mas claro sea tu perfil, mas facil sera que una profesional favorita confie al responderte.{% else %}Completa al menos un contacto directo y una galeria cuidada antes de promocionar anuncios.{% endif %}</p>
+                </div>
+
+                <div class="grid gap-3">
+                    <button type="submit" class="btn-primary shadow-xl w-full">
+                        Guardar cambios
+                    </button>
+                    <a href="{% if is_client_profile %}{% url 'client_dashboard' %}{% else %}{% url 'professional_dashboard' %}{% endif %}" class="px-6 py-3 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold hover:bg-slate-50 transition text-center">Cancelar</a>
+                </div>
+            </aside>
+        </form>
+    </div>
+</div>
+
+<div id="lightbox-modal" class="fixed inset-0 z-[100] bg-black/90 hidden backdrop-blur-sm flex items-center justify-center p-4" onclick="closeLightbox()">
+    <div class="relative w-full max-w-4xl max-h-screen flex flex-col items-center">
+        <div id="lightbox-content" class="relative rounded-lg overflow-hidden shadow-2xl" onclick="event.stopPropagation()"></div>
+        <button class="mt-6 px-6 py-2 bg-white/10 text-white border border-white/20 rounded-full hover:bg-white/20 transition backdrop-blur-md" onclick="closeLightbox()">CERRAR</button>
+    </div>
+</div>
+
+<script>
+    document.getElementById('auto-upload-input').addEventListener('change', function () {
+        if (this.files.length > 0) {
+            document.getElementById('form-action').value = 'auto_upload_media';
+            document.getElementById('media-grid').style.opacity = '0.4';
+            document.getElementById('upload-container').classList.add('opacity-50', 'pointer-events-none');
+            this.form.submit();
+        }
+    });
+
+    function deleteMedia(mediaId) {
+        if (confirm('Seguro que quieres eliminar este archivo?')) {
+            fetch('/accounts/perfil/media/delete/' + mediaId + '/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => {
+                    if (response.ok) {
+                        var el = document.getElementById('media-' + mediaId);
+                        if (el) el.remove();
+                    } else {
+                        alert('Error al eliminar');
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+    }
+
+    function openLightbox(url, isVideo) {
+        const modal = document.getElementById('lightbox-modal');
+        const container = document.getElementById('lightbox-content');
+        container.innerHTML = '';
+        if (isVideo === 'true') {
+            const video = document.createElement('video');
+            video.src = url;
+            video.controls = true;
+            video.autoplay = true;
+            video.className = "max-w-full max-h-[80vh] rounded-lg";
+            container.appendChild(video);
+        } else {
+            const img = document.createElement('img');
+            img.src = url;
+            img.className = "max-w-full max-h-[80vh] object-contain rounded-lg";
+            container.appendChild(img);
+        }
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+        const modal = document.getElementById('lightbox-modal');
+        const container = document.getElementById('lightbox-content');
+        modal.classList.add('hidden');
+        container.innerHTML = '';
+        document.body.style.overflow = '';
+    }
+</script>
+{% endblock %}

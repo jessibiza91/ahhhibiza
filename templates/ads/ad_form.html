@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-6 lg:py-10">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-5 mb-6">
+            <div>
+                <p class="text-sm font-bold uppercase tracking-widest text-fuchsia-600">Anuncio profesional</p>
+                <h1 class="text-3xl sm:text-4xl font-serif font-bold text-slate-900 mt-2">
+                    {% if form.instance.pk %}Editar anuncio{% else %}Crear anuncio{% endif %}
+                </h1>
+                <p class="text-slate-500 mt-2 max-w-2xl">Crea una ficha publica clara y guarda el material mas sensible en la zona HOT privada.</p>
+            </div>
+            <a href="{% url 'professional_dashboard' %}" class="h-12 px-5 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50 transition flex items-center justify-center gap-2">
+                <i class="fas fa-arrow-left"></i> Panel
+            </a>
+        </div>
+
+        {% if form.errors %}
+        <div class="mb-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+            Revisa los campos marcados antes de guardar.
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-4 gap-2 mb-5">
+            <a href="#paso-basico" class="rounded-2xl bg-white border border-slate-100 p-3 text-center shadow-sm">
+                <span class="mx-auto w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-bold">1</span>
+                <span class="block text-xs font-bold text-slate-700 mt-2">Basico</span>
+            </a>
+            <a href="#paso-publico" class="rounded-2xl bg-white border border-slate-100 p-3 text-center shadow-sm">
+                <span class="mx-auto w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">2</span>
+                <span class="block text-xs font-bold text-slate-700 mt-2">Publico</span>
+            </a>
+            <a href="#paso-hot" class="rounded-2xl bg-white border border-slate-100 p-3 text-center shadow-sm">
+                <span class="mx-auto w-8 h-8 rounded-full bg-fuchsia-100 text-fuchsia-700 flex items-center justify-center text-sm font-bold">3</span>
+                <span class="block text-xs font-bold text-slate-700 mt-2">HOT</span>
+            </a>
+            <a href="#paso-servicios" class="rounded-2xl bg-white border border-slate-100 p-3 text-center shadow-sm">
+                <span class="mx-auto w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-bold">4</span>
+                <span class="block text-xs font-bold text-slate-700 mt-2">Activar</span>
+            </a>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6" id="ad-builder-form">
+            {% csrf_token %}
+
+            <div class="space-y-5">
+                <section id="paso-basico" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 sm:p-6 scroll-mt-28">
+                    <div class="flex items-start gap-3 mb-5">
+                        <span class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold">1</span>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Lo basico</h2>
+                            <p class="text-sm text-slate-500">Nombre del anuncio, estado y promocion interna.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-slate-700 mb-2">Titulo que vera el cliente</label>
+                            {{ form.title }}
+                            {{ form.title.errors }}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">Estado</label>
+                            {{ form.status }}
+                            <p class="text-xs text-slate-400 mt-2">Activo aparece publicado. Cerrado queda pausado.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">Producto de promocion</label>
+                            {{ form.promotion_product }}
+                            <p class="text-xs text-slate-400 mt-2">Define cuantos Tangas consume y que visibilidad tendra.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="paso-publico" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 sm:p-6 scroll-mt-28">
+                    <div class="flex items-start gap-3 mb-5">
+                        <span class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">2</span>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Parte publica</h2>
+                            <p class="text-sm text-slate-500">Esto lo puede ver cualquier visitante antes de registrarse.</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">Descripcion publica</label>
+                            {{ form.public_description }}
+                            {{ form.public_description.errors }}
+                            <p class="text-xs text-amber-600 mt-2">Usa una presentacion cuidada. Reserva lo explicito para la zona privada.</p>
+                        </div>
+
+                        <div>
+                            <label for="id_public_media" class="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/60 p-5 text-center hover:border-blue-400 transition">
+                                <i class="fas fa-cloud-upload-alt text-3xl text-blue-500"></i>
+                                <span class="mt-2 font-bold text-blue-800">Subir fotos publicas</span>
+                                <span class="text-xs text-blue-600">Puedes seleccionar varias a la vez</span>
+                            </label>
+                            <div class="sr-only">{{ form.public_media }}</div>
+                            <p id="public-files-status" class="text-xs text-slate-500 mt-2"></p>
+                        </div>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                            {% for img in ad.gallery.all %}
+                            {% if not img.is_private and not img.is_trashed %}
+                            <div class="thumb-container" id="img-{{ img.id }}">
+                                <img src="{{ img.image.url }}" class="w-full h-full object-cover" alt="Imagen publica">
+                                <button type="button" class="delete-overlay btn-delete-img" data-id="{{ img.id }}" aria-label="Eliminar imagen publica">
+                                    <i class="fas fa-times pointer-events-none"></i>
+                                </button>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+
+                <section id="paso-hot" class="bg-fuchsia-50 rounded-2xl shadow-sm border border-fuchsia-100 p-5 sm:p-6 scroll-mt-28">
+                    <div class="flex items-start gap-3 mb-5">
+                        <span class="w-10 h-10 rounded-xl bg-white text-fuchsia-700 flex items-center justify-center font-bold">3</span>
+                        <div>
+                            <h2 class="text-xl font-bold text-fuchsia-950">Zona HOT privada</h2>
+                            <p class="text-sm text-fuchsia-700">Solo usuarios registrados pueden ver esta parte.</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-bold text-fuchsia-950 mb-2">Descripcion privada</label>
+                            {{ form.hot_description }}
+                            {{ form.hot_description.errors }}
+                        </div>
+
+                        <div>
+                            <label for="id_hot_media" class="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-fuchsia-200 bg-white/70 p-5 text-center hover:border-fuchsia-400 transition">
+                                <i class="fas fa-lock text-3xl text-fuchsia-500"></i>
+                                <span class="mt-2 font-bold text-fuchsia-900">Subir fotos privadas</span>
+                                <span class="text-xs text-fuchsia-700">Quedan bloqueadas para visitantes sin registro</span>
+                            </label>
+                            <div class="sr-only">{{ form.hot_media }}</div>
+                            <p id="hot-files-status" class="text-xs text-fuchsia-700 mt-2"></p>
+                        </div>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                            {% for img in ad.gallery.all %}
+                            {% if img.is_private and not img.is_trashed %}
+                            <div class="thumb-container border-2 border-fuchsia-300" id="img-{{ img.id }}">
+                                <img src="{{ img.image.url }}" class="w-full h-full object-cover blur-[2px] hover:blur-none transition" alt="Imagen privada">
+                                <div class="absolute inset-0 flex items-center justify-center pointer-events-none text-white font-bold opacity-70">HOT</div>
+                                <button type="button" class="delete-overlay btn-delete-img" data-id="{{ img.id }}" aria-label="Eliminar imagen privada">
+                                    <i class="fas fa-times pointer-events-none"></i>
+                                </button>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+
+                <section id="paso-servicios" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 sm:p-6 scroll-mt-28">
+                    <div class="flex items-start gap-3 mb-5">
+                        <span class="w-10 h-10 rounded-xl bg-green-100 text-green-700 flex items-center justify-center font-bold">4</span>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Servicios y publicacion</h2>
+                            <p class="text-sm text-slate-500">Marca lo que quieras mostrar y guarda el anuncio.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        {% for checkbox in form.services %}
+                        <label class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl bg-slate-50 hover:bg-fuchsia-50 cursor-pointer transition">
+                            {{ checkbox.tag }}
+                            <span class="text-slate-700 font-bold text-sm">{{ checkbox.choice_label }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </section>
+            </div>
+
+            <aside class="space-y-4 xl:sticky xl:top-28 xl:self-start">
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div class="aspect-[4/3] bg-slate-100 relative">
+                        {% if ad.cover_image %}
+                        <img src="{{ ad.cover_image.image.url }}" class="w-full h-full object-cover" alt="Vista previa">
+                        {% else %}
+                        <div class="w-full h-full flex items-center justify-center text-slate-300">
+                            <i class="fas fa-image text-5xl"></i>
+                        </div>
+                        {% endif %}
+                        <span class="absolute top-3 left-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-slate-700">Preview</span>
+                    </div>
+                    <div class="p-5">
+                        <h2 class="text-lg font-bold text-slate-900" id="preview-title">
+                            {{ form.instance.title|default:"Tu titulo aparecera aqui" }}
+                        </h2>
+                        <p class="text-sm text-slate-500 mt-2 line-clamp-3" id="preview-description">
+                            {{ form.instance.public_description|default:"La descripcion publica ayudara al cliente a entender tu anuncio." }}
+                        </p>
+                        <div class="grid grid-cols-2 gap-2 mt-4 text-center">
+                            <div class="rounded-xl bg-blue-50 p-3">
+                                <i class="fas fa-globe text-blue-600"></i>
+                                <p class="text-xs font-bold text-blue-800 mt-1">Publico</p>
+                            </div>
+                            <div class="rounded-xl bg-fuchsia-50 p-3">
+                                <i class="fas fa-lock text-fuchsia-600"></i>
+                                <p class="text-xs font-bold text-fuchsia-800 mt-1">Privado</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                    <h2 class="text-lg font-bold text-slate-900">Guardar</h2>
+                    <p class="text-sm text-slate-500 mt-2">Puedes guardar y volver al panel, o guardar y ver el resultado real.</p>
+                    <div class="grid gap-3 mt-5">
+                        <button type="submit" name="save_and_preview" value="1" class="h-12 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition">
+                            <i class="fas fa-eye mr-2"></i> Guardar y ver
+                        </button>
+                        <button type="submit" class="btn-primary shadow-xl w-full">
+                            {% if form.instance.pk %}Actualizar{% else %}Publicar{% endif %}
+                        </button>
+                        <a href="{% url 'professional_dashboard' %}" class="h-12 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold hover:bg-slate-50 transition flex items-center justify-center">Cancelar</a>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 p-3 xl:hidden">
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="submit" name="save_and_preview" value="1" class="h-12 rounded-xl bg-slate-900 text-white font-bold">
+                        <i class="fas fa-eye mr-2"></i> Ver
+                    </button>
+                    <button type="submit" class="h-12 rounded-xl bg-fuchsia-600 text-white font-bold">
+                        {% if form.instance.pk %}Guardar{% else %}Publicar{% endif %}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const titleInput = document.getElementById('id_title');
+        const publicDescription = document.getElementById('id_public_description');
+        const previewTitle = document.getElementById('preview-title');
+        const previewDescription = document.getElementById('preview-description');
+        const publicMedia = document.getElementById('id_public_media');
+        const hotMedia = document.getElementById('id_hot_media');
+
+        function updatePreview() {
+            previewTitle.textContent = titleInput.value.trim() || 'Tu titulo aparecera aqui';
+            previewDescription.textContent = publicDescription.value.trim() || 'La descripcion publica ayudara al cliente a entender tu anuncio.';
+        }
+
+        function updateFileStatus(input, statusId, label) {
+            const status = document.getElementById(statusId);
+            const count = input.files.length;
+            status.textContent = count ? `${count} archivo(s) preparados para subir como ${label}. Se guardaran al publicar.` : '';
+        }
+
+        if (titleInput && publicDescription) {
+            titleInput.addEventListener('input', updatePreview);
+            publicDescription.addEventListener('input', updatePreview);
+        }
+
+        if (publicMedia) {
+            publicMedia.addEventListener('change', function () {
+                updateFileStatus(publicMedia, 'public-files-status', 'publicos');
+            });
+        }
+
+        if (hotMedia) {
+            hotMedia.addEventListener('change', function () {
+                updateFileStatus(hotMedia, 'hot-files-status', 'privados');
+            });
+        }
+
+        document.querySelectorAll('.btn-delete-img').forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const imgId = this.getAttribute('data-id');
+                if (!imgId) return;
+                if (confirm('Seguro que quieres retirar esta imagen? Ira a la papelera.')) {
+                    fetch(`/ads/imagen/delete/${imgId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                const container = document.getElementById(`img-${imgId}`);
+                                if (container) container.remove();
+                            } else {
+                                alert(data.message || 'No se pudo eliminar la imagen.');
+                            }
+                        })
+                        .catch(() => alert('Error de conexion.'));
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

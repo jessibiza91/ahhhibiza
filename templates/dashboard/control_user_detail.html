@@ -1,0 +1,487 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-8 sm:py-10">
+    <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-5 mb-6">
+        <div class="flex items-center gap-4">
+            {% if profile.avatar %}
+            <img src="{{ profile.avatar.url }}" alt="{{ managed_user.username }}" class="w-20 h-20 rounded-2xl object-cover bg-slate-100">
+            {% else %}
+            <div class="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-300">
+                <i class="fas fa-user text-3xl"></i>
+            </div>
+            {% endif %}
+            <div>
+                <p class="text-sm font-bold uppercase tracking-widest text-fuchsia-600">Ficha de usuario</p>
+                <h1 class="text-3xl sm:text-4xl font-serif font-bold text-slate-900 mt-1">{{ managed_user.username }}</h1>
+                <p class="text-slate-500 mt-1">{{ managed_user.get_type_display }} · {{ profile.get_zone_display|default:"Sin zona" }}</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'control_professionals' %}" class="h-11 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold flex items-center gap-2">
+                <i class="fas fa-arrow-left"></i> Profesionales
+            </a>
+            {% if managed_user.type == 'CLIENT' %}
+            <a href="{% url 'control_clients' %}" class="h-11 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold flex items-center gap-2">
+                <i class="fas fa-users"></i> Clientes
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if saved %}
+    <div class="mb-5 rounded-2xl border border-green-100 bg-green-50 p-4 text-sm font-bold text-green-700">
+        Cambios guardados correctamente.
+    </div>
+    {% endif %}
+
+    {% if media_uploaded %}
+    <div class="mb-5 rounded-2xl border border-green-100 bg-green-50 p-4 text-sm font-bold text-green-700">
+        Material subido correctamente a la galeria interna.
+    </div>
+    {% endif %}
+
+    {% if recharge_done %}
+    <div class="mb-5 rounded-2xl border border-green-100 bg-green-50 p-4 text-sm font-bold text-green-700">
+        Recarga manual de Tangas aplicada correctamente.
+    </div>
+    {% endif %}
+
+    {% if user_form.errors or profile_form.errors %}
+    <div class="mb-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+        Revisa los campos marcados antes de guardar.
+    </div>
+    {% endif %}
+
+    <section class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <span class="w-11 h-11 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-shield-alt"></i>
+                </span>
+                <div>
+                    <h2 class="text-xl font-bold text-amber-950">Modo intervencion directa</h2>
+                    <p class="text-sm text-amber-800 mt-1">Patricia actua como gestora del sistema: puede completar, corregir, pausar o retirar contenido para ayudar al usuario o moderar material inadecuado.</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="#perfil-control" class="px-3 py-2 rounded-xl bg-white text-amber-800 text-sm font-bold border border-amber-200">Perfil</a>
+                <a href="#anuncios-control" class="px-3 py-2 rounded-xl bg-white text-amber-800 text-sm font-bold border border-amber-200">Anuncios</a>
+                <a href="#galeria-control" class="px-3 py-2 rounded-xl bg-white text-amber-800 text-sm font-bold border border-amber-200">Galeria</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p class="text-xs uppercase font-bold tracking-wide text-slate-400">Estado</p>
+            {% if managed_user.is_active %}
+            <p class="text-lg font-bold text-green-600 mt-2">Activo</p>
+            {% else %}
+            <p class="text-lg font-bold text-rose-600 mt-2">Inactivo</p>
+            {% endif %}
+        </div>
+        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p class="text-xs uppercase font-bold tracking-wide text-slate-400">Tangas</p>
+            <p class="text-2xl font-bold text-fuchsia-600 mt-1">{{ managed_user.tangas_balance }}</p>
+        </div>
+        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p class="text-xs uppercase font-bold tracking-wide text-slate-400">Anuncios</p>
+            <p class="text-2xl font-bold text-slate-900 mt-1">{{ ads.count }}</p>
+        </div>
+        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p class="text-xs uppercase font-bold tracking-wide text-slate-400">Perfil</p>
+            <p class="text-2xl font-bold text-slate-900 mt-1">{{ usage_mb }} MB</p>
+        </div>
+        <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+            <p class="text-xs uppercase font-bold tracking-wide text-slate-400">Contacto</p>
+            {% if managed_user.phone_call_url or managed_user.whatsapp_url or managed_user.telegram_url %}
+            <p class="text-lg font-bold text-green-600 mt-2">Disponible</p>
+            {% else %}
+            <p class="text-lg font-bold text-yellow-600 mt-2">Pendiente</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
+        {% csrf_token %}
+        <div class="space-y-5">
+            <section id="perfil-control" class="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm scroll-mt-28">
+                <div class="flex items-center gap-3 mb-5">
+                    <span class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+                        <i class="fas fa-id-badge"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Cuenta</h2>
+                        <p class="text-sm text-slate-500">Datos de acceso, tipo de usuario, estado y saldo.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Usuario</label>
+                        {{ user_form.username }}
+                        {{ user_form.username.errors }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Email</label>
+                        {{ user_form.email }}
+                        {{ user_form.email.errors }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Nombre</label>
+                        {{ user_form.first_name }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Apellidos</label>
+                        {{ user_form.last_name }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Tipo</label>
+                        {{ user_form.type }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Saldo Tangas</label>
+                        {{ user_form.tangas_balance }}
+                    </div>
+                    <label class="md:col-span-2 flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-100 p-4 font-bold text-slate-700">
+                        {{ user_form.is_active }}
+                        Cuenta activa y visible
+                    </label>
+                </div>
+            </section>
+
+            <section id="anuncios-control" class="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm scroll-mt-28">
+                <div class="flex items-center gap-3 mb-5">
+                    <span class="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+                        <i class="fas fa-phone"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Contacto</h2>
+                        <p class="text-sm text-slate-500">Estos datos alimentan llamada, WhatsApp y Telegram.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Telefono</label>
+                        {{ user_form.phone }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">WhatsApp</label>
+                        {{ user_form.whatsapp_id }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Telegram</label>
+                        {{ user_form.telegram_id }}
+                    </div>
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm">
+                <div class="flex items-center gap-3 mb-5">
+                    <span class="w-10 h-10 rounded-xl bg-fuchsia-50 text-fuchsia-600 flex items-center justify-center">
+                        <i class="fas fa-user-circle"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">{% if managed_user.type == 'CLIENT' %}Perfil cliente privado{% else %}Perfil publico{% endif %}</h2>
+                        <p class="text-sm text-slate-500">{% if managed_user.type == 'CLIENT' %}Avatar, descripcion, zona, origen, redes y fotos privadas visibles solo para profesionales favoritas.{% else %}Avatar, descripcion, zona, origen y redes.{% endif %}</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Avatar</label>
+                        {{ profile_form.avatar }}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Descripcion</label>
+                        {{ profile_form.bio }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Zona</label>
+                        {{ profile_form.zone }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Origen</label>
+                        {{ profile_form.origin }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Fecha de nacimiento</label>
+                        {{ profile_form.birth_date }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Instagram</label>
+                        {{ profile_form.instagram_url }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Facebook</label>
+                        {{ profile_form.facebook_url }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">X / Twitter</label>
+                        {{ profile_form.twitter_url }}
+                    </div>
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm">
+                <div class="flex items-center justify-between gap-3 mb-5">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Anuncios</h2>
+                        <p class="text-sm text-slate-500">Vista rapida de publicaciones de este usuario.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="{% url 'control_ad_create_for_user' managed_user.id %}" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-sm font-bold">Crear anuncio</a>
+                        <a href="{% url 'control_ads' %}?owner={{ managed_user.id }}" class="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-bold">Ver todos</a>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {% for ad in ads %}
+                    <article class="rounded-2xl bg-slate-50 border border-slate-100 p-3 flex gap-3">
+                        {% with cover=ad.cover_image %}
+                        {% if cover %}
+                        <img src="{{ cover.image.url }}" class="w-20 h-20 rounded-xl object-cover bg-slate-100" alt="{{ ad.title }}">
+                        {% else %}
+                        <div class="w-20 h-20 rounded-xl bg-white flex items-center justify-center text-slate-300">
+                            <i class="fas fa-image"></i>
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                        <div class="min-w-0 flex-1">
+                            <h3 class="font-bold text-slate-900 truncate">{{ ad.title }}</h3>
+                            <p class="text-xs text-slate-500 mt-1">{{ ad.get_status_display }}</p>
+                            <div class="flex gap-2 mt-3">
+                                <a href="{% url 'ad_detail' ad.id %}" target="_blank" class="px-3 py-2 rounded-lg bg-white text-slate-700 text-xs font-bold border border-slate-200">Ver</a>
+                                <a href="{% url 'control_ad_detail' ad.id %}" class="px-3 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold">Editar</a>
+                            </div>
+                        </div>
+                    </article>
+                    {% empty %}
+                    <div class="md:col-span-2 rounded-2xl border border-dashed border-slate-200 p-8 text-center text-slate-400">No tiene anuncios.</div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            {% if managed_user.type == 'CLIENT' %}
+            <section class="rounded-2xl border border-fuchsia-100 bg-white p-5 sm:p-6 shadow-sm">
+                <div class="flex items-start gap-3 mb-5">
+                    <span class="w-10 h-10 rounded-xl bg-fuchsia-50 text-fuchsia-600 flex items-center justify-center">
+                        <i class="fas fa-heart"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900">Favoritas del cliente</h2>
+                        <p class="text-sm text-slate-500">Profesionales que pueden ver este perfil privado.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {% for favorite in client_favorites %}
+                    <article class="rounded-2xl bg-fuchsia-50 border border-fuchsia-100 p-3 flex gap-3">
+                        {% with cover=favorite.ad.cover_image %}
+                        {% if cover %}
+                        <img src="{{ cover.image.url }}" class="w-20 h-20 rounded-xl object-cover bg-white" alt="{{ favorite.ad.title }}">
+                        {% else %}
+                        <div class="w-20 h-20 rounded-xl bg-white flex items-center justify-center text-fuchsia-200">
+                            <i class="fas fa-image"></i>
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                        <div class="min-w-0 flex-1">
+                            <h3 class="font-bold text-slate-900 truncate">{{ favorite.ad.title }}</h3>
+                            <p class="text-xs text-slate-500 mt-1">{{ favorite.ad.owner.username }}</p>
+                            <a href="{% url 'control_user_detail' favorite.ad.owner.id %}" class="inline-block mt-3 px-3 py-2 rounded-lg bg-white text-fuchsia-700 text-xs font-bold border border-fuchsia-100">Ver profesional</a>
+                        </div>
+                    </article>
+                    {% empty %}
+                    <div class="md:col-span-2 rounded-2xl border border-dashed border-slate-200 p-8 text-center text-slate-400">Este cliente aun no tiene favoritas.</div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <section id="galeria-control" class="rounded-2xl border border-amber-100 bg-white p-5 sm:p-6 shadow-sm scroll-mt-28">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
+                    <div class="flex items-start gap-3">
+                        <span class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                            <i class="fas fa-images"></i>
+                        </span>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">{% if managed_user.type == 'CLIENT' %}Galeria privada del cliente{% else %}Galeria interna del profesional{% endif %}</h2>
+                            <p class="text-sm text-slate-500">{% if managed_user.type == 'CLIENT' %}Material privado visible para sus profesionales favoritas. Patricia puede ayudar a completarlo o retirar contenido inadecuado.{% else %}Banco de material disponible para ayudarle a completar perfil y anuncios. Patricia puede retirar contenido inadecuado.{% endif %}</p>
+                        </div>
+                    </div>
+                    <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">{{ media_items|length }} archivos</span>
+                </div>
+
+                <div class="rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/60 p-5 mb-5">
+                    <label for="id_control_media_files" class="flex min-h-24 cursor-pointer flex-col items-center justify-center text-center">
+                        <i class="fas fa-cloud-upload-alt text-3xl text-amber-500"></i>
+                        <span class="mt-2 font-bold text-amber-900">Subir fotos o videos a la galeria interna</span>
+                        <span class="text-xs text-amber-700">Selecciona varios archivos y pulsa Subir material</span>
+                    </label>
+                    <input id="id_control_media_files" type="file" name="media_files" multiple accept="image/*,video/*" class="sr-only">
+                    <p id="profile-media-status" class="text-xs text-amber-700 mt-2 text-center"></p>
+                    <button type="submit" name="action" value="upload_profile_media" class="mt-4 w-full h-11 rounded-xl bg-amber-500 text-white font-bold">
+                        <i class="fas fa-upload mr-2"></i> Subir material
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" id="profile-media-grid">
+                    {% for media in media_items %}
+                    <div class="thumb-container" id="profile-media-{{ media.id }}">
+                        <a href="{{ media.file.url }}" target="_blank" class="block w-full h-full">
+                            {% if media.is_video %}
+                            <video src="{{ media.file.url }}" class="w-full h-full object-cover"></video>
+                            <span class="absolute inset-0 flex items-center justify-center pointer-events-none text-white text-2xl drop-shadow">
+                                <i class="fas fa-play-circle"></i>
+                            </span>
+                            {% else %}
+                            <img src="{{ media.file.url }}" class="w-full h-full object-cover" alt="Media perfil">
+                            {% endif %}
+                        </a>
+                        <button type="button" class="delete-overlay btn-delete-profile-media" data-id="{{ media.id }}" aria-label="Eliminar material de perfil">
+                            <i class="fas fa-times pointer-events-none"></i>
+                        </button>
+                    </div>
+                    {% empty %}
+                    <div class="col-span-full rounded-2xl border border-dashed border-slate-200 p-8 text-center text-slate-400">No hay material en la galeria interna.</div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+
+        <aside class="space-y-4 xl:sticky xl:top-28 xl:self-start">
+            <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                <h2 class="text-lg font-bold text-slate-900">Guardar cambios</h2>
+                <p class="text-sm text-slate-500 mt-2">Actualiza cuenta y perfil desde esta ficha visual.</p>
+                <button type="submit" class="mt-5 w-full h-12 rounded-xl bg-slate-900 text-white font-bold">
+                    <i class="fas fa-save mr-2"></i> Guardar
+                </button>
+                {% if not managed_user.is_superuser %}
+                <button type="submit" name="action" value="trash_user" class="mt-3 w-full h-12 rounded-xl bg-rose-50 text-rose-700 font-bold border border-rose-100" onclick="return confirm('Enviar este perfil completo a la papelera? Sus anuncios quedaran pausados en papelera.');">
+                    <i class="fas fa-trash mr-2"></i> Enviar perfil a papelera
+                </button>
+                {% endif %}
+            </div>
+
+            <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                <h2 class="text-lg font-bold text-slate-900">Uso de perfil</h2>
+                <div class="space-y-3 mt-4 text-sm">
+                    <div class="flex justify-between gap-4"><span class="text-slate-500">Avatar</span><strong>{{ avatar_mb }} MB</strong></div>
+                    <div class="flex justify-between gap-4"><span class="text-slate-500">Galeria</span><strong>{{ gallery_mb }} MB</strong></div>
+                    <div class="flex justify-between gap-4"><span class="text-slate-500">Total</span><strong>{{ usage_mb }} MB</strong></div>
+                </div>
+            </div>
+
+            <div id="finanzas-control" class="rounded-2xl border border-fuchsia-100 bg-white p-5 shadow-sm scroll-mt-24">
+                <h2 class="text-lg font-bold text-slate-900">Recarga manual de Tangas</h2>
+                <p class="text-sm text-slate-500 mt-2">Solo Patricia puede ajustar saldo directamente. Queda registrado como transaccion.</p>
+                <div class="mt-4 rounded-xl bg-fuchsia-50 p-4">
+                    <p class="text-xs uppercase font-bold tracking-wide text-fuchsia-600">Saldo actual</p>
+                    <p class="text-3xl font-bold text-fuchsia-700 mt-1">{{ managed_user.tangas_balance }} T</p>
+                </div>
+                <div class="grid gap-3 mt-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Tangas a recargar</label>
+                        {{ recharge_form.amount }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Concepto</label>
+                        {{ recharge_form.description }}
+                    </div>
+                    <button type="submit" name="action" value="manual_tanga_recharge" class="h-11 rounded-xl bg-fuchsia-600 text-white font-bold" onclick="return confirm('Aplicar esta recarga manual de Tangas?');">
+                        <i class="fas fa-coins mr-2"></i> Recargar Tangas
+                    </button>
+                </div>
+
+                <div class="mt-5">
+                    <h3 class="text-sm font-bold text-slate-700 mb-2">Ultimos movimientos</h3>
+                    <div class="space-y-2">
+                        {% for tx in transactions %}
+                        <div class="rounded-xl bg-slate-50 p-3 flex items-start justify-between gap-3">
+                            <span class="min-w-0">
+                                <strong class="block text-sm text-slate-800">{{ tx.description }}</strong>
+                                <span class="text-xs text-slate-400">{{ tx.timestamp }}</span>
+                            </span>
+                            <span class="text-sm font-bold text-fuchsia-600">{{ tx.amount }}</span>
+                        </div>
+                        {% empty %}
+                        <p class="text-sm text-slate-400">Sin movimientos registrados.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-fuchsia-100 bg-fuchsia-50 p-5 shadow-sm">
+                <h2 class="text-lg font-bold text-fuchsia-950 mb-3">Material anuncios</h2>
+                <p class="text-xs font-bold text-fuchsia-700 mb-2">Publico</p>
+                <div class="grid grid-cols-3 gap-2 mb-4">
+                    {% for media in public_ad_media %}
+                    <a href="{{ media.image.url }}" target="_blank" class="aspect-square rounded-xl overflow-hidden bg-white block">
+                        <img src="{{ media.image.url }}" class="w-full h-full object-cover" alt="Media publica">
+                    </a>
+                    {% empty %}
+                    <p class="col-span-3 text-sm text-fuchsia-700">Sin material publico.</p>
+                    {% endfor %}
+                </div>
+                <p class="text-xs font-bold text-fuchsia-700 mb-2">Privado HOT</p>
+                <div class="grid grid-cols-3 gap-2">
+                    {% for media in private_ad_media %}
+                    <a href="{{ media.image.url }}" target="_blank" class="aspect-square rounded-xl overflow-hidden bg-white block relative">
+                        <img src="{{ media.image.url }}" class="w-full h-full object-cover blur-[2px]" alt="Media privada">
+                        <span class="absolute inset-0 flex items-center justify-center text-white font-bold text-xs">HOT</span>
+                    </a>
+                    {% empty %}
+                    <p class="col-span-3 text-sm text-fuchsia-700">Sin material privado.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </aside>
+
+        <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 p-3 xl:hidden">
+            <button type="submit" class="w-full h-12 rounded-xl bg-slate-900 text-white font-bold">
+                <i class="fas fa-save mr-2"></i> Guardar cambios
+            </button>
+        </div>
+    </form>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const profileMediaInput = document.getElementById('id_control_media_files');
+        const profileMediaStatus = document.getElementById('profile-media-status');
+        if (profileMediaInput && profileMediaStatus) {
+            profileMediaInput.addEventListener('change', function () {
+                const count = profileMediaInput.files.length;
+                profileMediaStatus.textContent = count ? `${count} archivo(s) preparados para subir.` : '';
+            });
+        }
+
+        document.querySelectorAll('.btn-delete-profile-media').forEach((button) => {
+            button.addEventListener('click', function () {
+                const mediaId = this.dataset.id;
+                if (!mediaId) return;
+                if (confirm('Eliminar este material de la galeria interna?')) {
+                    fetch(`/accounts/perfil/media/delete/${mediaId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                const node = document.getElementById(`profile-media-${mediaId}`);
+                                if (node) node.remove();
+                            } else {
+                                alert(data.message || 'No se pudo eliminar el material.');
+                            }
+                        })
+                        .catch(() => alert('Error de conexion.'));
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

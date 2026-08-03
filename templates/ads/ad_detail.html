@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-10 ad-detail-page">
+    <div class="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden">
+        <div class="relative h-96 bg-gray-200">
+            {% with cover=ad.cover_image %}
+            {% if cover %}
+            <img src="{{ cover.image.url }}" alt="{{ ad.title }}" class="w-full h-full object-cover">
+            {% else %}
+            <div class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300">
+                <i class="fas fa-images text-6xl"></i>
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-8 pt-24 text-white">
+                <div class="flex justify-between items-end gap-6">
+                    <div>
+                        <h1 class="text-4xl font-serif font-bold mb-2">{{ ad.title }}</h1>
+                        <p class="flex flex-wrap items-center gap-4 text-lg opacity-90">
+                            <span><i class="fas fa-map-marker-alt text-fuchsia-400"></i> {{ ad.owner.profile.get_zone_display }}</span>
+                            {% if ad.owner.profile.get_age %}<span>{{ ad.owner.profile.get_age }} anos</span>{% endif %}
+                            <span>{{ ad.owner.profile.get_origin_display }}</span>
+                        </p>
+                    </div>
+                    {% if user.is_authenticated and user.type == 'CLIENT' %}
+                    <form method="post" action="{% url 'toggle_favorite_ad' ad.id %}" class="shrink-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="h-12 w-12 rounded-full bg-white/95 text-fuchsia-600 shadow-lg flex items-center justify-center hover:bg-fuchsia-50 transition" title="{% if is_favorite %}Quitar de favoritas{% else %}Guardar favorita{% endif %}">
+                            <i class="{% if is_favorite %}fas{% else %}far{% endif %} fa-heart text-xl"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="flex border-b border-gray-100">
+            <a href="#info-publica" class="flex-1 py-4 text-center font-bold text-fuchsia-600 border-b-2 border-fuchsia-600 bg-fuchsia-50/50">
+                <i class="fas fa-info-circle mr-2"></i> Informacion Publica
+            </a>
+            <a href="#zona-intima" class="flex-1 py-4 text-center font-bold text-slate-500 hover:text-slate-700 bg-gray-50/50">
+                <i class="fas fa-fire mr-2"></i> Contenido Intimo
+            </a>
+        </div>
+
+        <div class="p-8 md:p-12 grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div class="md:col-span-2 space-y-8">
+                <section id="info-publica" class="scroll-mt-24">
+                    <h3 class="font-serif text-2xl font-bold text-slate-900 mb-4">Sobre mi</h3>
+                    <div class="prose prose-slate max-w-none text-slate-600 leading-relaxed">
+                        {{ ad.public_description|linebreaks }}
+                    </div>
+                    {% if ad.owner.profile.bio %}
+                    <div class="mt-6 p-6 bg-purple-50 rounded-2xl border border-purple-100">
+                        <p class="italic text-purple-800">"{{ ad.owner.profile.bio }}"</p>
+                    </div>
+                    {% endif %}
+                </section>
+
+                <section>
+                    <h4 class="font-bold text-slate-800 mb-4">Fotos Publicas</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {% for img in ad.gallery.all %}
+                        {% if not img.is_private and not img.is_trashed %}
+                        <div class="rounded-xl overflow-hidden shadow-md h-40">
+                            <img src="{{ img.image.url }}" alt="{{ ad.title }}" class="w-full h-full object-cover">
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </section>
+
+                {% if ad.services.count > 0 %}
+                <section>
+                    <h3 class="font-serif text-2xl font-bold text-slate-900 mb-4">Servicios</h3>
+                    <div class="flex flex-wrap gap-2">
+                        {% for service in ad.services.all %}
+                        <span class="px-4 py-2 bg-fuchsia-50 text-fuchsia-700 rounded-full text-sm font-bold border border-fuchsia-100 flex items-center gap-2">
+                            <i class="fas fa-check text-xs"></i> {{ service.name }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% endif %}
+
+                <section id="zona-intima" class="pt-8 border-t border-gray-100 scroll-mt-24">
+                    <h3 class="font-serif text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3">
+                        <i class="fas fa-lock text-fuchsia-600"></i> Zona Intima
+                        {% if not can_view_private %}
+                        <span class="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded ml-2">BLOQUEADO</span>
+                        {% endif %}
+                    </h3>
+
+                    <div class="relative rounded-2xl overflow-hidden {% if not can_view_private %}bg-slate-900{% else %}bg-fuchsia-50 p-6 border border-fuchsia-100{% endif %}">
+                        {% if can_view_private %}
+                        <div class="prose prose-fuchsia max-w-none text-slate-700">
+                            {{ ad.hot_description|linebreaks }}
+                        </div>
+
+                        <div class="mt-8 grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {% for img in ad.gallery.all %}
+                            {% if img.is_private and not img.is_trashed %}
+                            <div class="rounded-xl overflow-hidden shadow-md h-40">
+                                <img src="{{ img.image.url }}" alt="{{ ad.title }}" class="w-full h-full object-cover">
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        <div class="mt-8 flex gap-4">
+                            {% if ad.owner.profile.instagram_url %}
+                            <a href="{{ ad.owner.profile.instagram_url }}" target="_blank" rel="noopener" class="w-12 h-12 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 text-white flex items-center justify-center text-xl shadow-lg hover:scale-110 transition">
+                                <i class="fab fa-instagram"></i>
+                            </a>
+                            {% endif %}
+                            {% if ad.owner.profile.facebook_url %}
+                            <a href="{{ ad.owner.profile.facebook_url }}" target="_blank" rel="noopener" class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl shadow-lg hover:scale-110 transition">
+                                <i class="fab fa-facebook"></i>
+                            </a>
+                            {% endif %}
+                            {% if ad.owner.profile.twitter_url %}
+                            <a href="{{ ad.owner.profile.twitter_url }}" target="_blank" rel="noopener" class="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center text-xl shadow-lg hover:scale-110 transition">
+                                <i class="fab fa-twitter"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div class="p-8 blur-exclusive opacity-40">
+                            <p>Contenido privado reservado para usuarios registrados.</p>
+                            <div class="mt-4 h-40 rounded-xl bg-white/10"></div>
+                        </div>
+
+                        <div class="absolute inset-0 flex flex-col items-center justify-center z-10 p-6 text-center">
+                            <div class="w-16 h-16 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center mb-4 text-2xl text-white border border-white/20">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                            <h4 class="text-xl font-bold text-white mb-2">Contenido Exclusivo</h4>
+                            <p class="text-slate-300 mb-6 max-w-xs">Registrate gratis para ver la descripcion privada y redes sociales.</p>
+                            <a href="{% url 'register_selector' %}" class="btn-primary shadow-2xl shadow-fuchsia-500/50 border border-white/20">
+                                DESBLOQUEAR AHORA
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </section>
+
+                <section class="mt-12 p-8 bg-white border border-fuchsia-200 rounded-2xl shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-fuchsia-500"></div>
+                    <h4 class="font-serif text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-shield-alt text-fuchsia-500"></i> Protocolo de seguridad y cortesia
+                    </h4>
+                    <p class="text-slate-600 text-sm leading-relaxed text-justify">
+                        Al establecer contacto, menciona que has descubierto este perfil en <strong class="text-fuchsia-600">Ahhh! Ibiza</strong>.
+                        Por seguridad, no realices pagos, transferencias o depositos por adelantado antes de validar el encuentro o servicio.
+                    </p>
+                </section>
+            </div>
+
+            <aside class="space-y-6">
+                {% if user.is_authenticated and user.type == 'CLIENT' %}
+                <form method="post" action="{% url 'toggle_favorite_ad' ad.id %}" class="bg-white p-4 rounded-2xl border border-fuchsia-100 shadow-sm">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition {% if is_favorite %}bg-fuchsia-600 text-white{% else %}bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100{% endif %}">
+                        <i class="{% if is_favorite %}fas{% else %}far{% endif %} fa-heart"></i>
+                        {% if is_favorite %}GUARDADA{% else %}GUARDAR FAVORITA{% endif %}
+                    </button>
+                </form>
+                {% endif %}
+
+                <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                    {% if ad.owner.phone_call_url %}
+                    <a href="{{ ad.owner.phone_call_url }}" class="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-lg transition mb-3 flex items-center justify-center gap-2">
+                        <i class="fas fa-phone text-xl"></i> LLAMAR AHORA
+                    </a>
+                    {% else %}
+                    <button class="w-full py-4 bg-slate-300 text-white font-bold rounded-xl mb-3 flex items-center justify-center gap-2" disabled>
+                        <i class="fas fa-phone text-xl"></i> LLAMADA NO DISPONIBLE
+                    </button>
+                    {% endif %}
+
+                    {% if ad.owner.whatsapp_url %}
+                    <a href="{{ ad.owner.whatsapp_url }}" target="_blank" rel="noopener" class="w-full py-4 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl shadow-lg shadow-green-500/30 transition mb-3 flex items-center justify-center gap-2">
+                        <i class="fab fa-whatsapp text-xl"></i> WHATSAPP
+                    </a>
+                    {% else %}
+                    <button class="w-full py-4 bg-slate-300 text-white font-bold rounded-xl mb-3 flex items-center justify-center gap-2" disabled>
+                        <i class="fab fa-whatsapp text-xl"></i> WHATSAPP NO DISPONIBLE
+                    </button>
+                    {% endif %}
+
+                    {% if ad.owner.telegram_url %}
+                    <a href="{{ ad.owner.telegram_url }}" target="_blank" rel="noopener" class="w-full py-4 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl shadow-lg shadow-sky-500/30 transition mb-3 flex items-center justify-center gap-2">
+                        <i class="fab fa-telegram text-xl"></i> TELEGRAM
+                    </a>
+                    {% else %}
+                    <button class="w-full py-4 bg-slate-300 text-white font-bold rounded-xl mb-3 flex items-center justify-center gap-2" disabled>
+                        <i class="fab fa-telegram text-xl"></i> TELEGRAM NO DISPONIBLE
+                    </button>
+                    {% endif %}
+                    <p class="text-center text-xs text-slate-400">Menciona que viste el anuncio en Ahhh! Ibiza</p>
+                </div>
+
+                <div class="bg-slate-50 p-6 rounded-2xl">
+                    <div class="flex items-center gap-3 text-slate-500 mb-2">
+                        <i class="fas fa-eye"></i> Visitas
+                    </div>
+                    <div class="text-2xl font-bold text-slate-800">{{ ad.owner.profile.profile_visits }}</div>
+                </div>
+            </aside>
+        </div>
+    </div>
+</div>
+
+{% if ad.owner.phone_call_url or ad.owner.whatsapp_url or ad.owner.telegram_url %}
+<nav class="mobile-contact-bar" aria-label="Contactar con {{ ad.title }}">
+    {% if ad.owner.phone_call_url %}
+    <a href="{{ ad.owner.phone_call_url }}" class="mobile-contact-action">
+        <i class="fas fa-phone" aria-hidden="true"></i>
+        <span>Llamar</span>
+    </a>
+    {% endif %}
+    {% if ad.owner.whatsapp_url %}
+    <a href="{{ ad.owner.whatsapp_url }}" target="_blank" rel="noopener" class="mobile-contact-action whatsapp">
+        <i class="fab fa-whatsapp" aria-hidden="true"></i>
+        <span>WhatsApp</span>
+    </a>
+    {% endif %}
+    {% if ad.owner.telegram_url %}
+    <a href="{{ ad.owner.telegram_url }}" target="_blank" rel="noopener" class="mobile-contact-action telegram">
+        <i class="fab fa-telegram" aria-hidden="true"></i>
+        <span>Telegram</span>
+    </a>
+    {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

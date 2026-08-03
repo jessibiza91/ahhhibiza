@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-10">
+    <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8">
+        <div>
+            <p class="text-sm font-bold uppercase tracking-widest text-fuchsia-600">Panel de control</p>
+            <h1 class="text-4xl font-serif font-bold text-slate-900 mt-2">Operacion Ahhh! Ibiza</h1>
+            <p class="text-slate-500 mt-2">Control visual de usuarios, profesionales, anuncios, materiales y Tangas.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'control_ads' %}" class="px-5 py-3 rounded-lg bg-slate-900 text-white font-bold flex items-center gap-2"><i class="fas fa-bullhorn"></i>Anuncios</a>
+            <a href="{% url 'control_media' %}" class="px-5 py-3 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold flex items-center gap-2"><i class="fas fa-images"></i>Materiales</a>
+            <a href="{% url 'control_trash' %}" class="px-5 py-3 rounded-lg bg-rose-50 text-rose-700 font-bold flex items-center gap-2"><i class="fas fa-trash"></i>Papelera</a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
+        <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <p class="text-sm text-slate-500">Profesionales</p>
+            <p class="text-4xl font-bold text-slate-900 mt-2">{{ professionals_count }}</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <p class="text-sm text-slate-500">Clientes</p>
+            <p class="text-4xl font-bold text-slate-900 mt-2">{{ clients_count }}</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <p class="text-sm text-slate-500">Anuncios</p>
+            <p class="text-4xl font-bold text-slate-900 mt-2">{{ ads_count }}</p>
+            <p class="text-xs text-slate-400 mt-1">{{ active_ads }} activos · {{ closed_ads }} cerrados</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <p class="text-sm text-slate-500">Materiales</p>
+            <p class="text-4xl font-bold text-slate-900 mt-2">{{ total_media }}</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <p class="text-sm text-slate-500">Acciones</p>
+            <div class="mt-3 grid gap-2">
+                <a href="{% url 'control_professionals' %}" class="text-sm font-bold text-fuchsia-600">Profesionales</a>
+                <a href="{% url 'control_clients' %}" class="text-sm font-bold text-fuchsia-600">Clientes</a>
+                <a href="{% url 'control_ads' %}" class="text-sm font-bold text-fuchsia-600">Anuncios</a>
+                <a href="{% url 'control_media' %}" class="text-sm font-bold text-fuchsia-600">Materiales</a>
+                <a href="{% url 'control_transactions' %}" class="text-sm font-bold text-fuchsia-600">Movimientos</a>
+                <a href="{% url 'control_promotion_products' %}" class="text-sm font-bold text-fuchsia-600">Promociones</a>
+                <a href="{% url 'control_service_tags' %}" class="text-sm font-bold text-fuchsia-600">Servicios</a>
+                <a href="{% url 'control_site_settings' %}" class="text-sm font-bold text-fuchsia-600">Configuracion</a>
+                <a href="{% url 'control_trash' %}" class="text-sm font-bold text-rose-600">Papelera</a>
+            </div>
+        </div>
+    </div>
+
+    <section class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-8">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h2 class="text-xl font-bold text-slate-900">Profesionales</h2>
+                <p class="text-sm text-slate-500">Vista rapida de estado, contacto, anuncios y materiales.</p>
+            </div>
+            <a href="{% url 'control_professionals' %}" class="text-sm font-bold text-fuchsia-600">Gestionar todos</a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4 sm:p-6">
+            {% for item in professional_cards %}
+            <article class="rounded-2xl border border-slate-100 p-4 bg-slate-50">
+                <div class="flex items-start gap-4">
+                    {% if item.profile.avatar %}
+                    <img src="{{ item.profile.avatar.url }}" class="w-16 h-16 rounded-2xl object-cover">
+                    {% else %}
+                    <div class="w-16 h-16 rounded-2xl bg-white flex items-center justify-center text-slate-300">
+                        <i class="fas fa-user text-2xl"></i>
+                    </div>
+                    {% endif %}
+                    <div class="min-w-0 flex-1">
+                        <h3 class="font-bold text-slate-900 truncate">{{ item.user.username }}</h3>
+                        <p class="text-sm text-slate-500">{{ item.profile.get_zone_display|default:"Sin zona" }}</p>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% if item.has_contact %}
+                            <span class="px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">Contacto</span>
+                            {% else %}
+                            <span class="px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold">Sin contacto</span>
+                            {% endif %}
+                            <span class="px-2 py-1 rounded-full bg-white text-slate-600 text-xs font-bold">{{ item.ads_count }} anuncios</span>
+                            <span class="px-2 py-1 rounded-full bg-white text-slate-600 text-xs font-bold">{{ item.media_count }} media</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-4">
+                    <a href="{% url 'control_user_detail' item.user.id %}" class="h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center text-sm font-bold">Editar</a>
+                    <a href="{% url 'control_ads' %}?owner={{ item.user.id }}" class="h-10 rounded-xl bg-white text-slate-700 flex items-center justify-center text-sm font-bold border border-slate-200">Anuncios</a>
+                </div>
+            </article>
+            {% empty %}
+            <div class="md:col-span-2 xl:col-span-3 text-center text-slate-400 py-10">No hay profesionales registrados.</div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <section class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+            <h2 class="text-lg font-bold text-slate-900 mb-4">Usuarios recientes</h2>
+            <div class="space-y-3">
+                {% for user_obj in recent_users %}
+                <a href="{% url 'control_user_detail' user_obj.id %}" class="flex items-center justify-between rounded-xl bg-slate-50 p-3">
+                    <span class="font-bold text-slate-800">{{ user_obj.username }}</span>
+                    <span class="text-xs text-slate-500">{{ user_obj.type }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+            <h2 class="text-lg font-bold text-slate-900 mb-4">Anuncios recientes</h2>
+            <div class="space-y-3">
+                {% for ad in recent_ads %}
+                <a href="{% url 'control_ad_detail' ad.id %}" class="block rounded-xl bg-slate-50 p-3">
+                    <div class="flex items-center justify-between gap-3">
+                        <span class="font-bold text-slate-800 truncate">{{ ad.title }}</span>
+                        <span class="text-xs text-slate-500">{{ ad.status }}</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">{{ ad.owner.username }}</p>
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+            <h2 class="text-lg font-bold text-slate-900 mb-4">Transacciones recientes</h2>
+            <div class="space-y-3">
+                {% for tx in recent_transactions %}
+                <a href="{% url 'control_user_detail' tx.user.id %}#finanzas-control" class="flex items-center justify-between rounded-xl bg-slate-50 p-3">
+                    <span>
+                        <strong class="block text-slate-800">{{ tx.user.username }}</strong>
+                        <span class="text-xs text-slate-400">{{ tx.description }}</span>
+                    </span>
+                    <span class="font-bold text-fuchsia-600">{{ tx.amount }}</span>
+                </a>
+                {% empty %}
+                <p class="text-sm text-slate-400">Sin transacciones todavia.</p>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+
+    <details class="mt-8 rounded-lg border border-slate-200 bg-slate-100 p-4 text-sm text-slate-600">
+        <summary class="cursor-pointer font-bold text-slate-700">Herramientas tecnicas de emergencia</summary>
+        <p class="mt-3">El administrador tecnico de Django queda reservado para diagnostico o recuperacion excepcional.</p>
+        <a href="{% url 'admin:index' %}" class="inline-flex mt-3 items-center gap-2 font-bold text-slate-700"><i class="fas fa-cog"></i>Abrir respaldo tecnico</a>
+    </details>
+</div>
+{% endblock %}

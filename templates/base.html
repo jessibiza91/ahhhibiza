@@ -1,0 +1,176 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ahhh! Ibiza | Luxury & Passion</title>
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- RESTORED: Tailwind CDN & Config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ahhh-gray': '#e5e7eb',
+                        'ahhh-fuchsia': '#D500F9',
+                        'ahhh-purple': '#6A1B9A',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="antialiased">
+
+    <!-- Age Gate Modal -->
+    <div id="ageGate" class="age-gate-overlay">
+        <div class="age-gate-content">
+            <img src="{% static 'img/logo_boca.png' %}" alt="Ahhh! Ibiza" class="pulsing-logo">
+            <h2 class="mb-4 text-2xl font-bold">Bienvenido a Ahhh! Ibiza</h2>
+            <p class="mb-8 text-gray-500">Acceso exclusivo para mayores de 18 años.</p>
+            <button onclick="acceptAgeGate()" class="btn-primary" style="width: 100%;">
+                SOY MAYOR DE EDAD
+            </button>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="site-nav ahhh-gray sticky top-0 z-40 border-b border-gray-300 shadow-sm">
+        <div class="container nav-content">
+            <div class="flex items-center gap-4">
+                {% if request.path != '/' and request.path != '/home/' %}
+                <button onclick="history.back()" class="btn-back text-fuchsia-600 shadow-sm" title="Volver atrás">
+                    <i class="fas fa-arrow-left text-fuchsia-600"></i>
+                </button>
+                {% endif %}
+                <a href="{% url 'home' %}">
+                    <img src="{% static 'img/logo_boca.png' %}" alt="Ahhh! Ibiza" class="nav-logo">
+                </a>
+            </div>
+
+            <button type="button" class="mobile-nav-toggle" aria-expanded="false" aria-controls="primaryNavigation" title="Abrir menu">
+                <i class="fas fa-bars" aria-hidden="true"></i>
+                <span class="sr-only">Abrir menu</span>
+            </button>
+
+            <div id="primaryNavigation" class="nav-actions">
+                <!-- Support Button -->
+                <a href="mailto:{{ support_email }}" class="nav-btn-circle" title="Soporte Técnico">
+                    <i class="fas fa-headset text-lg"></i>
+                </a>
+
+                {% if user.is_authenticated %}
+                {% if user.is_superuser %}
+                <a href="{% url 'control_panel' %}" class="nav-btn-luxury primary">
+                    <i class="fas fa-shield-alt"></i> CONTROL
+                </a>
+                {% endif %}
+
+                {% if user.type == 'PROFESSIONAL' %}
+                <a href="{% url 'professional_dashboard' %}" class="nav-btn-luxury primary">
+                    <i class="fas fa-columns"></i> PANEL
+                </a>
+                <a href="{% url 'profile_edit' %}" class="nav-btn-luxury">
+                    <i class="fas fa-user-circle"></i> PERFIL
+                </a>
+                {% endif %}
+
+                {% if user.type == 'CLIENT' and not user.is_superuser %}
+                <a href="{% url 'client_dashboard' %}" class="nav-btn-luxury primary">
+                    <i class="fas fa-heart"></i> MI PANEL
+                </a>
+                {% endif %}
+
+                <!-- Logout POST Form -->
+                <form id="logout-form" action="{% url 'logout' %}" method="post" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-btn-luxury" style="color: #ef4444; border-color: #fecaca;">
+                        <i class="fas fa-sign-out-alt"></i> SALIR
+                    </button>
+                </form>
+                {% else %}
+                <a href="{% url 'login' %}" class="nav-btn-luxury">Entrar</a>
+                <a href="{% url 'register_selector' %}" class="nav-btn-luxury primary">Registro</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="site-main">
+        {% if messages %}
+        <div class="container pt-4 space-y-2" aria-live="polite">
+            {% for message in messages %}
+            <div class="px-4 py-3 rounded-lg border font-semibold text-sm
+                {% if message.tags == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-800
+                {% elif message.tags == 'warning' %}bg-amber-50 border-amber-200 text-amber-800
+                {% elif message.tags == 'error' %}bg-rose-50 border-rose-200 text-rose-800
+                {% else %}bg-sky-50 border-sky-200 text-sky-800{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-50 py-12 mt-20 border-t border-gray-200">
+        <div class="container text-center text-gray-400 text-sm">
+            <p>&copy; 2026 Ahhh! Ibiza. Luxury Adult Services.</p>
+            <p class="mt-2">Ibiza • San Antonio • Santa Eulalia</p>
+            <p class="mt-4">
+                <a href="mailto:{{ support_email }}" class="hover:text-fuchsia-600 transition">Soporte Técnico</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Age Gate Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const ageGate = document.getElementById('ageGate');
+            const isAdult = localStorage.getItem('ahhh_j_is_adult');
+
+            if (!isAdult) {
+                ageGate.classList.add('active');
+                document.body.style.overflow = 'hidden'; // Lock Scroll
+            }
+        });
+
+        function acceptAgeGate() {
+            const ageGate = document.getElementById('ageGate');
+            localStorage.setItem('ahhh_j_is_adult', 'true');
+            ageGate.classList.remove('active');
+            document.body.style.overflow = ''; // Unlock Scroll
+        }
+
+        const mobileNavToggle = document.querySelector('.mobile-nav-toggle');
+        const primaryNavigation = document.getElementById('primaryNavigation');
+
+        if (mobileNavToggle && primaryNavigation) {
+            mobileNavToggle.addEventListener('click', function () {
+                const isOpen = primaryNavigation.classList.toggle('is-open');
+                mobileNavToggle.setAttribute('aria-expanded', String(isOpen));
+                mobileNavToggle.querySelector('i').className = isOpen ? 'fas fa-times' : 'fas fa-bars';
+            });
+
+            primaryNavigation.addEventListener('click', function (event) {
+                if (event.target.closest('a, button[type="submit"]')) {
+                    primaryNavigation.classList.remove('is-open');
+                    mobileNavToggle.setAttribute('aria-expanded', 'false');
+                    mobileNavToggle.querySelector('i').className = 'fas fa-bars';
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

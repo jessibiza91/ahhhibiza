@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-8 sm:py-10">
+    <header class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-6">
+        <div>
+            <p class="text-sm font-bold uppercase tracking-widest text-fuchsia-600">Superadmin</p>
+            <h1 class="mt-2 text-3xl sm:text-4xl font-serif font-bold text-slate-900">Servicios</h1>
+            <p class="mt-2 text-slate-500">Opciones que las profesionales pueden asignar a sus anuncios.</p>
+        </div>
+        <a href="{% url 'control_panel' %}" class="h-11 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 font-bold flex items-center justify-center"><i class="fas fa-arrow-left mr-2"></i>Panel</a>
+    </header>
+
+    <form method="post" class="flex flex-col sm:flex-row gap-3 bg-white border border-slate-100 rounded-lg p-4 mb-6">
+        {% csrf_token %}
+        <div class="flex-1">{{ form.name }}</div>
+        <button name="action" value="save" class="h-12 px-5 rounded-lg bg-slate-900 text-white font-bold"><i class="fas fa-plus mr-2"></i>Crear servicio</button>
+    </form>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        {% for tag in tags %}
+        <form method="post" class="bg-white border border-slate-100 rounded-lg p-4 shadow-sm">
+            {% csrf_token %}<input type="hidden" name="tag_id" value="{{ tag.id }}">
+            <label class="block text-xs font-bold uppercase text-slate-400 mb-2">{{ tag.ad_count }} anuncios</label>
+            <input name="name" value="{{ tag.name }}" class="w-full h-11 px-3 border rounded-lg">
+            <div class="grid grid-cols-2 gap-2 mt-3">
+                <button name="action" value="save" class="h-10 rounded-lg bg-slate-900 text-white text-sm font-bold">Guardar</button>
+                <button name="action" value="delete" class="h-10 rounded-lg bg-rose-50 text-rose-700 text-sm font-bold" onclick="return confirm('Eliminar este servicio de todos los anuncios?');">Eliminar</button>
+            </div>
+        </form>
+        {% empty %}
+        <div class="md:col-span-2 xl:col-span-3 p-10 bg-white rounded-lg text-center text-slate-400">No hay servicios configurados.</div>
+        {% endfor %}
+    </section>
+</div>
+{% endblock %}

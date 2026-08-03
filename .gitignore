@@ -1,0 +1,30 @@
+# Entornos y secretos
+.env
+.venv/
+venv/
+venv_old/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Datos locales y contenido de usuarios
+db_ahhh.sqlite3
+media/
+backups/
+
+# Artefactos y herramientas
+artifacts/
+.pytest_cache/
+.coverage
+.vscode/
+.idea/
+node_modules/
+
+# Logs y capturas
+*.log
+maintenance/*.png
+
+# Sistema
+.DS_Store
+Thumbs.db
