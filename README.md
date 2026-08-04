@@ -93,19 +93,16 @@ En `launchers/`:
 
 ## Produccion
 
-El proyecto es actualmente un prototipo local (SQLite, sin pagos desplegados). La ruta completa de migracion a produccion (Docker Compose + PostgreSQL + HTTPS + pagos CCBill) esta documentada en:
-
-- `docs/migracion_produccion_ccbill_2026-08-02.md` — guia de despliegue y pagos.
-- `docs/roadmap.md` — vision y fases maestras.
-- `docs/state_of_play.md` — estado actual del proyecto.
+El proyecto es actualmente un prototipo local (SQLite, sin pagos desplegados). La migracion a produccion sigue pendiente y se abordara cuando se definan las reglas de negocio de Tangas y pagos.
 
 Resumen de la ruta prevista:
 
 1. Dividir `requirements.txt` en base/dev/prod y fijar versiones.
 2. Migrar la base de datos a PostgreSQL (SQLite solo en local).
-3. Media en object storage S3-compatible (`django-storages` + `boto3`).
-4. Desplegar con Docker Compose en un VPS + reverse proxy con HTTPS automatico.
-5. Cobros con CCBill (packs de Tangas), verificando el IPN de forma idempotente.
+3. Preparar hosting, dominio, HTTPS, static/media y backups restaurables.
+4. Integrar una pasarela de pago (aun no definida) para la compra de Tangas.
+
+Mas detalle en `docs/roadmap.md` (vision y fases maestras) y `docs/state_of_play.md` (estado actual del proyecto).
 
 ## Documentacion
 
