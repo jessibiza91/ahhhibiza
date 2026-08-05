@@ -29,7 +29,7 @@ if exist ".env" (
 )
 
 echo.
-echo [OK] Entorno listo. Usa RUN_APP.bat para arrancar el servidor.
+echo [OK] Entorno listo. Ejecuta SMART_MIGRATE.bat para crear/aplicar la DB y luego RUN_APP.bat para arrancar.
 popd
 pause
 exit /b 0

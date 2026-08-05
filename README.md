@@ -70,12 +70,14 @@ El sitio quedara disponible en <http://localhost:8000/> y el admin en <http://lo
 
 En `launchers/`:
 - `SETUP.bat` — crea el venv, instala dependencias y genera `.env` si no existe (primer uso o dev nuevo).
+- `SMART_MIGRATE.bat` — hace backup de la DB y aplica migraciones (obligatorio la primera vez y tras cada `git pull`).
 - `RUN_APP.bat` — arranca el servidor de desarrollo.
-- `SMART_MIGRATE.bat` — aplica migraciones.
 - `TAKE_SNAPSHOT.bat` — guarda un snapshot de la base de datos.
 - `CLEAN_CACHE.bat` — limpia caches de Python.
 - `VERIFY_PROJECT.bat` — verificacion del proyecto.
 - `RUN_TAILSCALE.bat` — arranca Tailscale.
+
+Orden recomendado para un dev nuevo o tras clonar: `SETUP.bat` → `SMART_MIGRATE.bat` → `RUN_APP.bat`. Si no aplicas las migraciones, la base de datos quedara vacia y las paginas fallaran con errores de "no such table".
 
 ## Variables de entorno (`.env`)
 
