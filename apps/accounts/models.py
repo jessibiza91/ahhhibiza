@@ -22,6 +22,11 @@ class CustomUser(AbstractUser):
         CLIENT = 'CLIENT', _('Cliente')
         PROFESSIONAL = 'PROFESSIONAL', _('Profesional')
 
+    email = models.EmailField(
+        unique=True,
+        verbose_name=_('Correo electrónico'),
+    )
+
     type = models.CharField(
         max_length=20, 
         choices=Types.choices, 
@@ -52,6 +57,11 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.get_type_display()})"
+
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.lower().strip()
+        super().save(*args, **kwargs)
 
     @property
     def is_trashed(self):

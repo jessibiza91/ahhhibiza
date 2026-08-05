@@ -2,10 +2,27 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import CustomUser, Profile, SiteConfiguration
 
+
+def clean_unique_email(form):
+    email = form.cleaned_data.get('email')
+    if email:
+        email = email.lower().strip()
+        if CustomUser.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('Ya existe un usuario con este correo.')
+    return email
+
+
 class ClientSignUpForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = CustomUser
         fields = UserCreationForm.Meta.fields + ('email',)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['email'].required = True
+
+    def clean_email(self):
+        return clean_unique_email(self)
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -14,10 +31,18 @@ class ClientSignUpForm(UserCreationForm):
             user.save()
         return user
 
+
 class ProfessionalSignUpForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = CustomUser
         fields = UserCreationForm.Meta.fields + ('email',)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['email'].required = True
+
+    def clean_email(self):
+        return clean_unique_email(self)
 
     def save(self, commit=True):
         user = super().save(commit=False)
