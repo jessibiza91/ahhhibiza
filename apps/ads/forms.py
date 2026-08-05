@@ -3,6 +3,19 @@ from django import forms
 from .models import Ad, PromotionProduct, ServiceTag
 from apps.accounts.forms import MultipleFileInput
 
+# Campo que permite subir multiples archivos
+class MultipleFileField(forms.FileField):
+    def clean(self, data, initial=None):
+        if not data:
+            return []
+
+        if isinstance(data, (list, tuple)):
+            return [
+                super().clean(file, initial)
+                for file in data
+            ]
+
+        return [super().clean(data, initial)]
 
 class AdForm(forms.ModelForm):
     STATUS_CHOICES = [
@@ -24,13 +37,13 @@ class AdForm(forms.ModelForm):
         label="Estado del Anuncio"
     )
 
-    public_media = forms.FileField(
+    public_media = MultipleFileField(
         widget=MultipleFileInput(attrs={'multiple': True}),
         required=False,
         label="Galeria Publica (Visible para todos)"
     )
 
-    hot_media = forms.FileField(
+    hot_media = MultipleFileField(
         widget=MultipleFileInput(attrs={'multiple': True}),
         required=False,
         label="Galeria HOT (Privada)"
@@ -75,13 +88,13 @@ class AdForm(forms.ModelForm):
 
 
 class ControlAdForm(forms.ModelForm):
-    public_media = forms.FileField(
+    public_media = MultipleFileField(
         widget=MultipleFileInput(attrs={'multiple': True}),
         required=False,
         label="Anadir fotos publicas"
     )
 
-    hot_media = forms.FileField(
+    hot_media = MultipleFileField(
         widget=MultipleFileInput(attrs={'multiple': True}),
         required=False,
         label="Anadir fotos privadas"
