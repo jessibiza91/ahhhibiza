@@ -52,12 +52,13 @@ class Ad(models.Model):
         max_length=20, 
         choices=Status.choices, 
         default=Status.ACTIVE,
+        db_index=True,
         verbose_name=_('Estado del Anuncio')
     )
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    trashed_at = models.DateTimeField(null=True, blank=True)
+    trashed_at = models.DateTimeField(null=True, blank=True, db_index=True)
     trashed_by = models.ForeignKey(
         CustomUser,
         null=True,

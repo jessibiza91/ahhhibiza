@@ -33,6 +33,7 @@ class CustomUser(AbstractUser):
         max_length=20, 
         choices=Types.choices, 
         default=Types.CLIENT,
+        db_index=True,
         verbose_name=_('Tipo de Usuario')
     )
     tangas_balance = models.DecimalField(
@@ -47,7 +48,7 @@ class CustomUser(AbstractUser):
     
     # Legacy/Transition fields
     legal_terms_accepted = models.BooleanField(default=False)
-    trashed_at = models.DateTimeField(null=True, blank=True)
+    trashed_at = models.DateTimeField(null=True, blank=True, db_index=True)
     trashed_by = models.ForeignKey(
         'self',
         null=True,
