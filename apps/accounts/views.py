@@ -775,6 +775,8 @@ def profile_edit(request):
         if action == 'auto_upload_media':
             # Skip Standard Form Validation (Bio, etc.) to allow quick upload
             # We only process files here.
+            uploaded_count = 0
+            skipped_count = 0
             try:
                 files = request.FILES.getlist('media_files')
                 if files:
@@ -800,11 +802,18 @@ def profile_edit(request):
                         
                         if (current_usage + f.size) <= (35 * 1024 * 1024):
                              ProfileMedia.objects.create(profile=profile, file=f, is_video=is_video)
+                             uploaded_count += 1
                         else:
+                             skipped_count += 1
                              print("Quota exceeded during auto-upload") # Fail silently or handle error
-                             
+                              
             except Exception as e:
                 print(f"Error auto-uploading: {e}")
+            
+            if uploaded_count:
+                messages.success(request, f'{uploaded_count} archivo(s) subido(s) a tu galeria.')
+            if skipped_count:
+                messages.warning(request, 'Algunos archivos superan la cuota de 35 MB y no se subieron.')
             
             return redirect('profile_edit')
 
@@ -814,6 +823,7 @@ def profile_edit(request):
         form = ProfileForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Perfil actualizado correctamente.')
             if request.user.type == CustomUser.Types.CLIENT:
                 return redirect('client_dashboard')
             return redirect('professional_dashboard')
