@@ -61,10 +61,25 @@
             </button>
 
             <div id="primaryNavigation" class="nav-actions">
-                <!-- Support Button -->
-                <a href="mailto:{{ support_email }}" class="nav-btn-circle" title="Soporte Técnico">
-                    <i class="fas fa-headset text-lg"></i>
-                </a>
+                <!-- Support Popover -->
+                <div class="support-popover-wrap" id="supportPopoverWrap">
+                    <button type="button" class="nav-btn-circle" id="supportToggle" title="Soporte Técnico" aria-expanded="false" aria-haspopup="dialog" aria-controls="supportPopover">
+                        <i class="fas fa-headset text-lg"></i>
+                    </button>
+                    <div id="supportPopover" class="support-popover" role="dialog" aria-label="Soporte técnico" hidden>
+                        <p class="support-popover-title">¿Necesitas ayuda?</p>
+                        <p class="support-popover-text">Escríbenos y te atenderemos:</p>
+                        <div class="support-popover-email" id="supportEmail">{{ support_email }}</div>
+                        <div class="support-popover-actions">
+                            <button type="button" class="support-popover-btn copy" id="copySupportEmail">
+                                <i class="fas fa-copy"></i> Copiar correo
+                            </button>
+                            <a href="mailto:{{ support_email }}" class="support-popover-btn mail">
+                                <i class="fas fa-envelope"></i> Abrir correo
+                            </a>
+                        </div>
+                    </div>
+                </div>
 
                 {% if user.is_authenticated %}
                 {% if user.is_superuser %}
@@ -128,7 +143,7 @@
             <p>&copy; 2026 Ahhh! Ibiza. Luxury Adult Services.</p>
             <p class="mt-2">Ibiza • San Antonio • Santa Eulalia</p>
             <p class="mt-4">
-                <a href="mailto:{{ support_email }}" class="hover:text-fuchsia-600 transition">Soporte Técnico</a>
+                <a href="mailto:{{ support_email }}" class="hover:text-fuchsia-600 transition">{{ support_email }}</a>
             </p>
         </div>
     </footer>
@@ -150,6 +165,81 @@
             localStorage.setItem('ahhh_j_is_adult', 'true');
             ageGate.classList.remove('active');
             document.body.style.overflow = ''; // Unlock Scroll
+        }
+
+        // Support Popover
+        const supportToggle = document.getElementById('supportToggle');
+        const supportPopover = document.getElementById('supportPopover');
+        const supportWrap = document.getElementById('supportPopoverWrap');
+        const copySupportEmail = document.getElementById('copySupportEmail');
+        const supportEmailEl = document.getElementById('supportEmail');
+
+        function toggleSupportPopover(open) {
+            const isOpen = open !== undefined ? open : supportPopover.hidden;
+            supportPopover.hidden = !isOpen;
+            supportToggle.setAttribute('aria-expanded', String(isOpen));
+        }
+
+        function supportCopyFallback(email) {
+            const textarea = document.createElement('textarea');
+            textarea.value = email;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            let ok = false;
+            try {
+                ok = document.execCommand('copy');
+            } catch (err) {
+                ok = false;
+            }
+            document.body.removeChild(textarea);
+            return ok;
+        }
+
+        function showCopiedFeedback() {
+            if (!copySupportEmail) return;
+            const originalHTML = copySupportEmail.innerHTML;
+            copySupportEmail.classList.add('copied');
+            copySupportEmail.innerHTML = '<i class="fas fa-check"></i> Copiado';
+            setTimeout(function () {
+                copySupportEmail.classList.remove('copied');
+                copySupportEmail.innerHTML = originalHTML;
+            }, 2000);
+        }
+
+        if (supportToggle && supportPopover && supportWrap) {
+            supportToggle.addEventListener('click', function (event) {
+                event.stopPropagation();
+                toggleSupportPopover();
+            });
+
+            document.addEventListener('click', function (event) {
+                if (!supportPopover.hidden && !supportWrap.contains(event.target)) {
+                    toggleSupportPopover(false);
+                }
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && !supportPopover.hidden) {
+                    toggleSupportPopover(false);
+                    supportToggle.focus();
+                }
+            });
+        }
+
+        if (copySupportEmail && supportEmailEl) {
+            copySupportEmail.addEventListener('click', function () {
+                const email = supportEmailEl.textContent.trim();
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(email).then(showCopiedFeedback, function () {
+                        if (supportCopyFallback(email)) showCopiedFeedback();
+                    });
+                } else if (supportCopyFallback(email)) {
+                    showCopiedFeedback();
+                }
+            });
         }
 
         const mobileNavToggle = document.querySelector('.mobile-nav-toggle');
