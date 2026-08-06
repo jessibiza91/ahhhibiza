@@ -1,15 +1,21 @@
-from django.core.management.base import BaseCommand
+import os
+
+from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth import get_user_model
-from django.conf import settings
 
 class Command(BaseCommand):
     help = 'Crea el superusuario Patricia si no existe'
 
     def handle(self, *args, **options):
         User = get_user_model()
-        username = 'Patricia'
-        password = 'Aa@123456'
-        
+        username = os.getenv('AHHH_ADMIN_USERNAME', 'Patricia')
+        password = os.getenv('AHHH_ADMIN_PASSWORD')
+
+        if not password:
+            raise CommandError(
+                'AHHH_ADMIN_PASSWORD no esta definido. Configuralo en el archivo .env antes de ejecutar este comando.'
+            )
+
         # Colors (ANSI)
         GREEN = '\033[92m'
         YELLOW = '\033[93m'
