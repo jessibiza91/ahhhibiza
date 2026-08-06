@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import CustomUser, Profile, SiteConfiguration
+from .validators import validate_age_of_majority
 
 
 def clean_unique_email(form):
@@ -121,7 +122,8 @@ class ProfileForm(forms.ModelForm):
         widget=forms.DateInput(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:ring-fuchsia-500', 'type': 'date'}, format='%Y-%m-%d'),
         input_formats=['%Y-%m-%d'],
         required=False,
-        label="Fecha de Nacimiento"
+        label="Fecha de Nacimiento",
+        validators=[validate_age_of_majority],
     )
 
     def __init__(self, *args, **kwargs):
@@ -195,7 +197,8 @@ class ControlProfileForm(forms.ModelForm):
         widget=forms.DateInput(attrs={'class': 'w-full px-4 py-3 border rounded-xl focus:ring-fuchsia-500', 'type': 'date'}, format='%Y-%m-%d'),
         input_formats=['%Y-%m-%d'],
         required=False,
-        label="Fecha de nacimiento"
+        label="Fecha de nacimiento",
+        validators=[validate_age_of_majority],
     )
 
     class Meta:

@@ -7,6 +7,8 @@ from django.utils.translation import gettext_lazy as _
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+from .validators import calculate_age
+
 def user_directory_path(instance, filename):
     # Universal path handler
     if hasattr(instance, 'user'):
@@ -147,11 +149,7 @@ class Profile(models.Model):
     profile_visits = models.PositiveIntegerField(default=0, verbose_name=_('Visitas al Perfil'))
 
     def get_age(self):
-        if self.birth_date:
-            from datetime import date
-            today = date.today()
-            return today.year - self.birth_date.year - ((today.month, today.day) < (self.birth_date.month, self.birth_date.day))
-        return None
+        return calculate_age(self.birth_date)
 
     def __str__(self):
         return f"Perfil de {self.user.username}"
