@@ -1,5 +1,10 @@
-from django.test import TestCase
+import io
+import tempfile
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from django.urls import reverse
+from PIL import Image
 
 from apps.accounts.models import CustomUser, FavoriteAd, ProfileMedia, SiteConfiguration
 from apps.ads.models import Ad, AdImage, ServiceTag
@@ -147,6 +152,19 @@ class PlatformFlowTestCase(TestCase):
         self.featured_ad.refresh_from_db()
         self.assertIsNotNone(self.featured_ad.trashed_at)
         self.assertEqual(self.featured_ad.status, Ad.Status.CERRADO)
+
+    def test_non_owner_cannot_edit_or_delete_another_ad(self):
+        self.client.force_login(self.other_professional)
+
+        edit_url = reverse('ad_edit', args=[self.featured_ad.id])
+        self.assertEqual(self.client.get(edit_url).status_code, 403)
+
+        delete_url = reverse('ad_delete', args=[self.featured_ad.id])
+        self.assertEqual(self.client.post(delete_url).status_code, 403)
+
+        self.featured_ad.refresh_from_db()
+        self.assertIsNone(self.featured_ad.trashed_at)
+        self.assertEqual(self.featured_ad.status, Ad.Status.ACTIVE)
 
     def test_superadmin_visual_control_is_staff_only(self):
         self.client.force_login(self.client_user)
@@ -392,3 +410,50 @@ class PlatformFlowTestCase(TestCase):
             reverse('ad_detail', args=[self.featured_ad.id]),
             fetch_redirect_response=False,
         )
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp(prefix='ahhh_ads_media_'))
+class AdMediaUploadTestCase(TestCase):
+    def setUp(self):
+        self.professional = CustomUser.objects.create_user(
+            username='uploader_prof',
+            password='test-password',
+            email='uploader_prof@example.com',
+            type=CustomUser.Types.PROFESSIONAL,
+        )
+        self.client.force_login(self.professional)
+
+    def _png_bytes(self):
+        buf = io.BytesIO()
+        Image.new('RGB', (2, 2), color=(0, 0, 255)).save(buf, format='PNG')
+        return buf.getvalue()
+
+    def test_ad_create_rejects_non_image_uploads(self):
+        fake = SimpleUploadedFile('malware.jpg', b'not-an-image', content_type='image/jpeg')
+        response = self.client.post(reverse('ad_create'), {
+            'title': 'Anuncio con archivo invalido',
+            'public_description': 'Test',
+            'status': 'ACTIVE',
+            'public_media': [fake],
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Ad.objects.filter(title='Anuncio con archivo invalido').exists())
+
+    def test_ad_create_accepts_valid_images(self):
+        img = SimpleUploadedFile('foto.png', self._png_bytes(), content_type='image/png')
+        response = self.client.post(reverse('ad_create'), {
+            'title': 'Anuncio valido',
+            'public_description': 'Test',
+            'status': 'ACTIVE',
+            'public_media': [img],
+        })
+
+        self.assertRedirects(
+            response,
+            reverse('professional_dashboard'),
+            fetch_redirect_response=False,
+        )
+        ad = Ad.objects.get(title='Anuncio valido')
+        self.assertEqual(ad.gallery.count(), 1)
+

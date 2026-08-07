@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import CustomUser, Profile, SiteConfiguration
+from .media_validators import validate_uploaded_file
 from .utils import safe_file_size
 from .validators import validate_age_of_majority
 
@@ -124,6 +125,7 @@ class ProfileForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['birth_date'].widget.format = '%Y-%m-%d'
+        self.fields['avatar'].validators.append(validate_uploaded_file)
         if self.instance and self.instance.pk:
             self.fields['phone'].initial = self.instance.user.phone
             self.fields['whatsapp_id'].initial = self.instance.user.whatsapp_id
@@ -148,6 +150,7 @@ class ProfileForm(forms.ModelForm):
             'bio': 'Nombre y descripción'
         }
         widgets = {
+            'avatar': forms.ClearableFileInput(attrs={'class': 'w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-fuchsia-50 file:text-fuchsia-700', 'accept': 'image/*'}),
             'bio': forms.Textarea(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:ring-fuchsia-500', 'rows': 3}),
             'zone': forms.Select(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:ring-fuchsia-500'}),
             'origin': forms.Select(attrs={'class': 'w-full px-4 py-2 border rounded-lg focus:ring-fuchsia-500'}),
@@ -196,11 +199,15 @@ class ControlProfileForm(forms.ModelForm):
         validators=[validate_age_of_majority],
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['avatar'].validators.append(validate_uploaded_file)
+
     class Meta:
         model = Profile
         fields = ['avatar', 'bio', 'zone', 'origin', 'birth_date', 'instagram_url', 'facebook_url', 'twitter_url']
         widgets = {
-            'avatar': forms.ClearableFileInput(attrs={'class': 'w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-fuchsia-50 file:text-fuchsia-700'}),
+            'avatar': forms.ClearableFileInput(attrs={'class': 'w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-fuchsia-50 file:text-fuchsia-700', 'accept': 'image/*'}),
             'bio': forms.Textarea(attrs={'class': 'w-full px-4 py-3 border rounded-xl focus:ring-fuchsia-500', 'rows': 4}),
             'zone': forms.Select(attrs={'class': 'w-full px-4 py-3 border rounded-xl focus:ring-fuchsia-500 bg-white'}),
             'origin': forms.Select(attrs={'class': 'w-full px-4 py-3 border rounded-xl focus:ring-fuchsia-500 bg-white'}),

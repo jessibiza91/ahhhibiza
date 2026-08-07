@@ -7,7 +7,7 @@ from .forms import AdForm, ControlAdForm, PromotionProductForm, ServiceTagForm
 from apps.accounts.models import CustomUser, FavoriteAd, ProfileMedia
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from django.http import JsonResponse
+from django.http import HttpResponseForbidden, JsonResponse
 from django.views.decorators.http import require_POST
 
 
@@ -69,15 +69,14 @@ def ad_create(request):
             ad = form.save(commit=False)
             ad.owner = request.user
             ad.save()
+            form.save_m2m()
             
             # Handle Public Media (is_private=False)
-            public_files = request.FILES.getlist('public_media')
-            for f in public_files:
+            for f in form.cleaned_data['public_media']:
                 AdImage.objects.create(ad=ad, image=f, is_private=False)
 
             # Handle Hot Media (is_private=True)
-            hot_files = request.FILES.getlist('hot_media')
-            for f in hot_files:
+            for f in form.cleaned_data['hot_media']:
                 AdImage.objects.create(ad=ad, image=f, is_private=True)
                 
             if 'save_and_preview' in request.POST:
@@ -94,21 +93,19 @@ def ad_edit(request, pk):
 
     ad = get_object_or_404(Ad.objects.prefetch_related('gallery'), pk=pk, trashed_at__isnull=True)
     if ad.owner != request.user:
-        return redirect('professional_dashboard')
-        
+        return HttpResponseForbidden()
+
     if request.method == 'POST':
         form = AdForm(request.POST, request.FILES, instance=ad)
         if form.is_valid():
             form.save()
             
             # Handle Public Media
-            public_files = request.FILES.getlist('public_media')
-            for f in public_files:
+            for f in form.cleaned_data['public_media']:
                 AdImage.objects.create(ad=ad, image=f, is_private=False)
 
             # Handle Hot Media
-            hot_files = request.FILES.getlist('hot_media')
-            for f in hot_files:
+            for f in form.cleaned_data['hot_media']:
                 AdImage.objects.create(ad=ad, image=f, is_private=True)
 
             if 'save_and_preview' in request.POST:
@@ -237,15 +234,14 @@ def control_promotion_product_edit(request, pk=None):
 
 
 @staff_member_required
+@require_POST
 def control_promotion_product_delete(request, pk):
     product = get_object_or_404(PromotionProduct, pk=pk)
-    if request.method == 'POST':
-        if product.ads.exists():
-            product.is_active = False
-            product.save(update_fields=['is_active', 'updated_at'])
-        else:
-            product.delete()
-        return redirect('control_promotion_products')
+    if product.ads.exists():
+        product.is_active = False
+        product.save(update_fields=['is_active', 'updated_at'])
+    else:
+        product.delete()
     return redirect('control_promotion_products')
 
 
@@ -276,11 +272,12 @@ def control_ad_detail(request, pk):
         if form.is_valid():
             form.save()
 
-            for f in request.FILES.getlist('public_media'):
+            for f in form.cleaned_data['public_media']:
                 AdImage.objects.create(ad=ad, image=f, is_private=False)
 
-            for f in request.FILES.getlist('hot_media'):
+            for f in form.cleaned_data['hot_media']:
                 AdImage.objects.create(ad=ad, image=f, is_private=True)
+
 
             if 'save_and_preview' in request.POST:
                 return redirect('ad_detail', ad_id=ad.id)
@@ -314,11 +311,12 @@ def control_ad_create_for_user(request, user_id):
             ad.save()
             form.save_m2m()
 
-            for f in request.FILES.getlist('public_media'):
+            for f in form.cleaned_data['public_media']:
                 AdImage.objects.create(ad=ad, image=f, is_private=False)
 
-            for f in request.FILES.getlist('hot_media'):
+            for f in form.cleaned_data['hot_media']:
                 AdImage.objects.create(ad=ad, image=f, is_private=True)
+
 
             if 'save_and_preview' in request.POST:
                 return redirect('ad_detail', ad_id=ad.id)
@@ -345,7 +343,7 @@ def ad_delete(request, pk):
 
     ad = get_object_or_404(Ad, pk=pk, trashed_at__isnull=True)
     if ad.owner != request.user:
-        return redirect('professional_dashboard')
+        return HttpResponseForbidden()
     
     ad.send_to_trash(by_user=request.user, note='Borrado por profesional')
     return redirect('professional_dashboard')

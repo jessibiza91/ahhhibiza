@@ -1,12 +1,20 @@
+import logging
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import login
+from django.contrib.auth.views import LoginView
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q, Sum
+from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
+from django_ratelimit.decorators import ratelimit
+from django.conf import settings
 from .forms import ClientSignUpForm, ProfessionalSignUpForm, ProfileForm, ControlUserForm, ControlProfileForm, ManualTangaRechargeForm, SiteConfigurationForm
+from .media_validators import validate_uploaded_file
 from .models import CustomUser, FavoriteAd, Profile, ProfileMedia, SiteConfiguration
 from .utils import safe_file_size
 from django.http import JsonResponse
@@ -14,11 +22,21 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from apps.ads.models import Ad, AdImage, PromotionProduct
 from apps.payments.models import Transaction
 
+logger = logging.getLogger(__name__)
+
 # ... (Previous register views) ...
 
 def register_selector(request):
     return render(request, 'registration/signup_selection.html')
 
+class RateLimitedLoginView(LoginView):
+    template_name = 'registration/login.html'
+
+    @method_decorator(ratelimit(key='ip', rate=settings.AHHH_AUTH_RATE, method='POST', block=True))
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+@ratelimit(key='ip', rate=settings.AHHH_AUTH_RATE, method='POST', block=True)
 def client_register(request):
     if request.method == 'POST':
         form = ClientSignUpForm(request.POST)
@@ -30,6 +48,7 @@ def client_register(request):
         form = ClientSignUpForm()
     return render(request, 'registration/signup_form.html', {'form': form, 'user_type': 'Cliente'})
 
+@ratelimit(key='ip', rate=settings.AHHH_AUTH_RATE, method='POST', block=True)
 def professional_register(request):
     if request.method == 'POST':
         form = ProfessionalSignUpForm(request.POST)
@@ -460,9 +479,17 @@ def control_user_detail(request, user_id):
                     ad.send_to_trash(by_user=request.user, note='Usuario enviado a papelera')
                 return redirect('control_professionals')
         elif action == 'upload_profile_media':
+            invalid_files = 0
             for uploaded_file in request.FILES.getlist('media_files'):
-                is_video = uploaded_file.name.lower().endswith(('.mp4', '.mov', '.avi', '.webm'))
-                ProfileMedia.objects.create(profile=profile, file=uploaded_file, is_video=is_video)
+                try:
+                    media_kind = validate_uploaded_file(uploaded_file)
+                except ValidationError as exc:
+                    logger.warning('Archivo rechazado en control_user_detail: %s', exc)
+                    invalid_files += 1
+                    continue
+                ProfileMedia.objects.create(profile=profile, file=uploaded_file, is_video=media_kind == 'video')
+            if invalid_files:
+                messages.error(request, f'{invalid_files} archivo(s) rechazado(s): no son imagenes o videos permitidos.')
             return redirect('control_user_detail', user_id=managed_user.id)
         elif action == 'manual_tanga_recharge':
             recharge_form = ManualTangaRechargeForm(request.POST)
@@ -761,46 +788,39 @@ def profile_edit(request):
         # FLOW A: AUTO-UPLOAD (ZERO-CLICK)
         # ---------------------------------------------------------
         if action == 'auto_upload_media':
-            # Skip Standard Form Validation (Bio, etc.) to allow quick upload
-            # We only process files here.
+            # Skip Standard Form Validation (Bio, etc.) to allow quick upload.
             uploaded_count = 0
             skipped_count = 0
-            try:
-                files = request.FILES.getlist('media_files')
-                if files:
-                    for f in files:
-                        # Basic Video Check
-                        is_video = f.name.lower().endswith(('.mp4', '.mov', '.avi'))
-                        
-                        # Create Object (Quota checked via Model/Form logic usually, 
-                        # but here we rely on the fact that if it exceeds, we might need manual check 
-                        # or just let it fail silently as per current "Try/Except" block requirements)
-                        # NOTE: Real quota check is in Form.clean. Since we skip form.is_valid(), 
-                        # we should technically replicate quota check here or just allow it.
-                        # Given instruction "Process UNICAMENTE... Valida la cuota...":
-                        
-                        # Quick Quota Check
-                        current_usage = sum(
-                            safe_file_size(m.file)
-                            for m in profile.media.filter(trashed_at__isnull=True)
-                        )
-                        current_usage += safe_file_size(profile.avatar)
-                        
-                        if (current_usage + f.size) <= (35 * 1024 * 1024):
-                             ProfileMedia.objects.create(profile=profile, file=f, is_video=is_video)
-                             uploaded_count += 1
-                        else:
-                             skipped_count += 1
-                             print("Quota exceeded during auto-upload") # Fail silently or handle error
-                              
-            except Exception as e:
-                print(f"Error auto-uploading: {e}")
-            
+            invalid_count = 0
+
+            for f in request.FILES.getlist('media_files'):
+                try:
+                    media_kind = validate_uploaded_file(f)
+                except ValidationError as exc:
+                    logger.warning('Archivo rechazado en auto-upload: %s', exc)
+                    invalid_count += 1
+                    continue
+
+                # Quick Quota Check
+                current_usage = sum(
+                    safe_file_size(m.file)
+                    for m in profile.media.filter(trashed_at__isnull=True)
+                )
+                current_usage += safe_file_size(profile.avatar)
+
+                if (current_usage + f.size) <= (35 * 1024 * 1024):
+                    ProfileMedia.objects.create(profile=profile, file=f, is_video=media_kind == 'video')
+                    uploaded_count += 1
+                else:
+                    skipped_count += 1
+
             if uploaded_count:
                 messages.success(request, f'{uploaded_count} archivo(s) subido(s) a tu galeria.')
             if skipped_count:
                 messages.warning(request, 'Algunos archivos superan la cuota de 35 MB y no se subieron.')
-            
+            if invalid_count:
+                messages.error(request, f'{invalid_count} archivo(s) no son imagenes o videos permitidos y no se subieron.')
+
             return redirect('profile_edit')
 
         # ---------------------------------------------------------

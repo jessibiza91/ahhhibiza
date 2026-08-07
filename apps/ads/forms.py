@@ -2,6 +2,7 @@ from django import forms
 
 from .models import Ad, PromotionProduct, ServiceTag
 from apps.accounts.forms import MultipleFileInput
+from apps.accounts.media_validators import validate_uploaded_file
 
 # Campo que permite subir multiples archivos
 class MultipleFileField(forms.FileField):
@@ -38,15 +39,17 @@ class AdForm(forms.ModelForm):
     )
 
     public_media = MultipleFileField(
-        widget=MultipleFileInput(attrs={'multiple': True}),
+        widget=MultipleFileInput(attrs={'multiple': True, 'accept': 'image/*,video/*'}),
         required=False,
-        label="Galeria Publica (Visible para todos)"
+        label="Galeria Publica (Visible para todos)",
+        validators=[validate_uploaded_file],
     )
 
     hot_media = MultipleFileField(
-        widget=MultipleFileInput(attrs={'multiple': True}),
+        widget=MultipleFileInput(attrs={'multiple': True, 'accept': 'image/*,video/*'}),
         required=False,
-        label="Galeria HOT (Privada)"
+        label="Galeria HOT (Privada)",
+        validators=[validate_uploaded_file],
     )
 
     services = forms.ModelMultipleChoiceField(
@@ -89,15 +92,17 @@ class AdForm(forms.ModelForm):
 
 class ControlAdForm(forms.ModelForm):
     public_media = MultipleFileField(
-        widget=MultipleFileInput(attrs={'multiple': True}),
+        widget=MultipleFileInput(attrs={'multiple': True, 'accept': 'image/*,video/*'}),
         required=False,
-        label="Anadir fotos publicas"
+        label="Anadir fotos publicas",
+        validators=[validate_uploaded_file],
     )
 
     hot_media = MultipleFileField(
-        widget=MultipleFileInput(attrs={'multiple': True}),
+        widget=MultipleFileInput(attrs={'multiple': True, 'accept': 'image/*,video/*'}),
         required=False,
-        label="Anadir fotos privadas"
+        label="Anadir fotos privadas",
+        validators=[validate_uploaded_file],
     )
 
     services = forms.ModelMultipleChoiceField(
