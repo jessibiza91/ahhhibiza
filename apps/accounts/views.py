@@ -8,6 +8,7 @@ from django.db.models import Q, Sum
 from django.views.decorators.http import require_POST
 from .forms import ClientSignUpForm, ProfessionalSignUpForm, ProfileForm, ControlUserForm, ControlProfileForm, ManualTangaRechargeForm, SiteConfigurationForm
 from .models import CustomUser, FavoriteAd, Profile, ProfileMedia, SiteConfiguration
+from .utils import safe_file_size
 from django.http import JsonResponse
 from django.utils.http import url_has_allowed_host_and_scheme
 from apps.ads.models import Ad, AdImage, PromotionProduct
@@ -441,15 +442,9 @@ def control_user_detail(request, user_id):
 
     media_items = profile.media.filter(trashed_at__isnull=True).order_by('-created_at')
     gallery_bytes = 0
-    avatar_bytes = 0
-    try:
-        if profile.avatar:
-            avatar_bytes = profile.avatar.size
-        for media in media_items:
-            if media.file:
-                gallery_bytes += media.file.size
-    except Exception:
-        pass
+    avatar_bytes = safe_file_size(profile.avatar)
+    for media in media_items:
+        gallery_bytes += safe_file_size(media.file)
 
     usage_mb = round((gallery_bytes + avatar_bytes) / (1024 * 1024), 2)
     saved = False
@@ -750,16 +745,9 @@ def profile_edit(request):
     
     # Calculate Storage Usage for Context
     gallery_bytes = 0
-    avatar_bytes = 0
-    
-    try:
-        if profile.avatar:
-            avatar_bytes = profile.avatar.size
-        for media in profile.media.all():
-            if media.file:
-                gallery_bytes += media.file.size
-    except:
-        pass # Fail silently
+    avatar_bytes = safe_file_size(profile.avatar)
+    for media in profile.media.all():
+        gallery_bytes += safe_file_size(media.file)
     
     total_bytes = gallery_bytes + avatar_bytes
     total_mb = total_bytes / (1024 * 1024)
@@ -792,13 +780,11 @@ def profile_edit(request):
                         # Given instruction "Process UNICAMENTE... Valida la cuota...":
                         
                         # Quick Quota Check
-                        current_usage = 0
-                        # ... (existing calculation logic available in context variables, but need fresh check)
-                        # Re-calculate quickly
-                        try:
-                           current_usage = sum([m.file.size for m in profile.media.filter(trashed_at__isnull=True) if m.file])
-                           if profile.avatar: current_usage += profile.avatar.size
-                        except: pass
+                        current_usage = sum(
+                            safe_file_size(m.file)
+                            for m in profile.media.filter(trashed_at__isnull=True)
+                        )
+                        current_usage += safe_file_size(profile.avatar)
                         
                         if (current_usage + f.size) <= (35 * 1024 * 1024):
                              ProfileMedia.objects.create(profile=profile, file=f, is_video=is_video)

@@ -12,6 +12,7 @@ class PlatformFlowTestCase(TestCase):
         cls.professional = CustomUser.objects.create_user(
             username='professional_test',
             password='test-password',
+            email='professional@example.com',
             type=CustomUser.Types.PROFESSIONAL,
         )
         cls.professional.profile.zone = 'EIVISSA'
@@ -20,6 +21,7 @@ class PlatformFlowTestCase(TestCase):
         cls.other_professional = CustomUser.objects.create_user(
             username='other_professional',
             password='test-password',
+            email='other_professional@example.com',
             type=CustomUser.Types.PROFESSIONAL,
         )
         cls.other_professional.profile.zone = 'SANT_ANTONI'
@@ -28,6 +30,7 @@ class PlatformFlowTestCase(TestCase):
         cls.client_user = CustomUser.objects.create_user(
             username='client_test',
             password='test-password',
+            email='client@example.com',
             type=CustomUser.Types.CLIENT,
         )
         cls.superadmin = CustomUser.objects.create_superuser(

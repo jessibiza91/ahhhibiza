@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import CustomUser, Profile, SiteConfiguration
+from .utils import safe_file_size
 from .validators import validate_age_of_majority
 
 
@@ -80,17 +81,11 @@ class ProfileForm(forms.ModelForm):
         current_usage = 0
         if self.instance.pk:
             # Existing Avatar
-            if self.instance.avatar:
-                try:
-                    current_usage += self.instance.avatar.size
-                except: pass
-            
+            current_usage += safe_file_size(self.instance.avatar)
+
             # Existing Media Gallery
             for media in self.instance.media.all():
-                try:
-                    if media.file:
-                        current_usage += media.file.size
-                except: pass
+                current_usage += safe_file_size(media.file)
         
         # 2. Add New Uploads
         new_usage = 0
