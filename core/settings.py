@@ -116,6 +116,16 @@ AUTH_PASSWORD_VALIDATORS = [
 # Rate limiting para login y registros (formato django-ratelimit: "5/h", "10/5m", ...)
 AHHH_AUTH_RATE = os.getenv('AHHH_AUTH_RATE', '5/h')
 
+# Cache: locmem por defecto (dev). En produccion usar Redis para que el rate
+# limiting sea compartido entre todos los workers de gunicorn.
+if os.getenv('AHHH_REDIS_URL'):
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.getenv('AHHH_REDIS_URL'),
+        },
+    }
+
 # Internationalization
 LANGUAGE_CODE = 'es'
 
@@ -157,6 +167,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = env_bool('AHHH_SECURE_SSL_REDIRECT', True)

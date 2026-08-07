@@ -106,14 +106,18 @@ Orden recomendado para un dev nuevo o tras clonar: `SETUP.bat` → `SMART_MIGRAT
 
 ## Produccion
 
-El proyecto es actualmente un prototipo local (PostgreSQL en Docker, sin pagos desplegados). La migracion a produccion sigue pendiente y se abordara cuando se definan las reglas de negocio de Tangas y pagos.
+El proyecto incluye un despliegue Docker completo (app + nginx + PostgreSQL + Redis)
+pensado para que lo ejecute una persona sin experiencia en despliegues:
 
-Resumen de la ruta prevista:
+- `docker-compose.yml` orquesta los 4 servicios.
+- `Dockerfile` construye la app (gunicorn).
+- `deploy/` contiene `entrypoint.sh` (migrate + init_admin + collectstatic),
+  `nginx/ahhh.conf` (proxy, static y media) y `systemd/ahhh.service`.
+- `requirements/base.txt`, `requirements/dev.txt`, `requirements/prod.txt`.
 
-1. Dividir `requirements.txt` en base/dev/prod y fijar versiones.
-2. ~~Migrar la base de datos a PostgreSQL~~ (hecho: PostgreSQL 16 vía Docker Compose).
-3. Preparar hosting, dominio, HTTPS, static/media y backups restaurables.
-4. Integrar una pasarela de pago (aun no definida) para la compra de Tangas.
+Guia paso a paso en `docs/despliegue.md`.
+
+Pendiente de definir: la pasarela de pago para la compra de Tangas.
 
 Mas detalle en `docs/roadmap.md` (vision y fases maestras) y `docs/state_of_play.md` (estado actual del proyecto).
 

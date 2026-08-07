@@ -1,7 +1,12 @@
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import render
 from apps.ads.models import Ad
 from apps.accounts.models import CustomUser, FavoriteAd, Profile
+
+
+def health(request):
+    return JsonResponse({'status': 'ok'})
 
 def home(request):
     ads = (
