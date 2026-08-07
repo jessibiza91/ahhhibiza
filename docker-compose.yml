@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:16
+    container_name: ahhh_postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${AHHH_POSTGRES_DB:?Define AHHH_POSTGRES_DB en .env}
+      POSTGRES_USER: ${AHHH_POSTGRES_USER:?Define AHHH_POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${AHHH_POSTGRES_PASSWORD:?Define AHHH_POSTGRES_PASSWORD en .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AHHH_POSTGRES_USER} -d ${AHHH_POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_data:

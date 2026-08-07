@@ -23,7 +23,7 @@ Ahhh! Ibiza es una plataforma privada para conectar profesionales y usuarios reg
 1. **Documentacion al dia**: cualquier cambio importante debe actualizar `docs/`.
 2. **Orden por directorios**: la raiz debe quedar limpia; scripts en `maintenance/`, lanzadores en `launchers/`, logica en `apps/`, plantillas en `templates/`.
 3. **Lanzadores centralizados**: las operaciones frecuentes deben tener `.bat` dentro de `launchers/`.
-4. **Base de datos unica**: `db_ahhh.sqlite3` es la fuente local activa.
+4. **Base de datos unica**: PostgreSQL 16 vía Docker Compose (`docker-compose.yml`, servicio `db`).
 5. **Media aislada por usuario**: los archivos de usuario deben vivir bajo `media/user_{id}/` siempre que sea posible.
 6. **Borrado con intencion**: toda eliminacion fisica de media debe estar validada por propietario, registro de motivo o rutina operativa clara.
 7. **Mobile first**: las pantallas criticas deben funcionar comodamente en movil.

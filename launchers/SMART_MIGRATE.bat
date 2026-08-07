@@ -6,7 +6,7 @@ call venv\Scripts\activate
 
 echo [1/3] Backing up DB...
 if not exist "backups" mkdir "backups"
-if exist "db_ahhh.sqlite3" copy "db_ahhh.sqlite3" "backups\db_ahhh_before_migrate_%RANDOM%.sqlite3" >nul
+docker compose exec -T db pg_dump -U ahhh_user -d ahhh_db > "backups\ahhh_backup_%RANDOM%.sql"
 
 echo [2/3] Making Migrations...
 python manage.py makemigrations

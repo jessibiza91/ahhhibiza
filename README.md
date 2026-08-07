@@ -13,7 +13,7 @@ Marketplace/directorio adulto para profesionales y usuarios registrados.
 | ---------- | ----------------------------------- |
 | Lenguaje   | Python 3.13                         |
 | Framework  | Django 6.0.7                        |
-| Base datos | SQLite (`db_ahhh.sqlite3`) en local |
+| Base datos | PostgreSQL 16 (Docker Compose) |
 | Media      | Imagenes de usuario (`media/`)      |
 | Estaticos  | CSS/JS/imagenes base (`static/`)    |
 
@@ -37,6 +37,7 @@ docs/         documentacion viva del proyecto
 
 - Python 3.13
 - Git
+- Docker Desktop (para la base de datos PostgreSQL)
 
 ## Instalacion y desarrollo local
 
@@ -56,13 +57,16 @@ pip install -r requirements.txt
 copy .env.example .env
 #   Edita .env si necesitas valores distintos (ALLOWED_HOSTS, etc.)
 
-# 5. Aplicar migraciones y crear el superusuario
+# 5. Levantar PostgreSQL (Docker) y aplicar migraciones
+docker compose up -d db
 python manage.py migrate
-python manage.py createsuperuser
 
-# 6. Arrancar el servidor de desarrollo
+# 6. Crear el superusuario y arrancar el servidor
+python manage.py init_admin
 python manage.py runserver
 ```
+
+> El superusuario se crea con `init_admin` (no `createsuperuser`) usando `AHHH_ADMIN_USERNAME`/`AHHH_ADMIN_PASSWORD` del `.env`; es idempotente. Más detalle en `docs/despliegue.md`.
 
 El sitio quedara disponible en <http://localhost:8000/> y el admin en <http://localhost:8000/admin/>.
 
@@ -77,7 +81,7 @@ En `launchers/`:
 - `VERIFY_PROJECT.bat` — verificacion del proyecto.
 - `RUN_TAILSCALE.bat` — arranca Tailscale.
 
-Orden recomendado para un dev nuevo o tras clonar: `SETUP.bat` → `SMART_MIGRATE.bat` → `RUN_APP.bat`. Si no aplicas las migraciones, la base de datos quedara vacia y las paginas fallaran con errores de "no such table".
+Orden recomendado para un dev nuevo o tras clonar: `SETUP.bat` → `SMART_MIGRATE.bat` → `RUN_APP.bat`. Si no levantas PostgreSQL (`docker compose up -d db`) o no aplicas las migraciones, la base de datos quedara vacia y las paginas fallaran con errores de conexion o tablas inexistentes.
 
 ## Variables de entorno (`.env`)
 
@@ -90,17 +94,24 @@ Orden recomendado para un dev nuevo o tras clonar: `SETUP.bat` → `SMART_MIGRAT
 | `AHHH_CSRF_TRUSTED_ORIGINS` | Origenes confiables CSRF (https)          | vacio              |
 | `AHHH_SECURE_SSL_REDIRECT`  | Redireccion SSL en produccion             | `true` en prod     |
 | `AHHH_SECURE_HSTS_SECONDS`  | Duración HSTS en produccion               | `3600` en prod     |
+| `AHHH_POSTGRES_DB`          | Nombre de la base PostgreSQL              | `ahhh_db`          |
+| `AHHH_POSTGRES_USER`        | Usuario de PostgreSQL                     | `ahhh_user`        |
+| `AHHH_POSTGRES_PASSWORD`    | Password de PostgreSQL                    | (obligatorio)      |
+| `AHHH_DB_HOST`              | Host de PostgreSQL                        | `127.0.0.1`        |
+| `AHHH_DB_PORT`              | Puerto de PostgreSQL                      | `5432`             |
+| `AHHH_ADMIN_USERNAME`       | Usuario superadmin (para `init_admin`)    | `Patricia`         |
+| `AHHH_ADMIN_PASSWORD`       | Password del superadmin                   | (obligatorio)      |
 
 `.env` esta en `.gitignore`: nunca se sube al repositorio. Solo se versiona `.env.example`.
 
 ## Produccion
 
-El proyecto es actualmente un prototipo local (SQLite, sin pagos desplegados). La migracion a produccion sigue pendiente y se abordara cuando se definan las reglas de negocio de Tangas y pagos.
+El proyecto es actualmente un prototipo local (PostgreSQL en Docker, sin pagos desplegados). La migracion a produccion sigue pendiente y se abordara cuando se definan las reglas de negocio de Tangas y pagos.
 
 Resumen de la ruta prevista:
 
 1. Dividir `requirements.txt` en base/dev/prod y fijar versiones.
-2. Migrar la base de datos a PostgreSQL (SQLite solo en local).
+2. ~~Migrar la base de datos a PostgreSQL~~ (hecho: PostgreSQL 16 vía Docker Compose).
 3. Preparar hosting, dominio, HTTPS, static/media y backups restaurables.
 4. Integrar una pasarela de pago (aun no definida) para la compra de Tangas.
 

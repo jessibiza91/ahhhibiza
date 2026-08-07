@@ -10,7 +10,7 @@ Referencia principal: `docs/roadmap.md`.
 
 1. **Leer documentacion primero**: empezar por `docs/roadmap.md`, `docs/state_of_play.md` y `docs/todo.md`.
 2. **Lanzadores centralizados**: las operaciones frecuentes deben vivir en `launchers/`.
-3. **Base de datos local activa**: `db_ahhh.sqlite3`.
+3. **Base de datos**: PostgreSQL 16 vía Docker Compose (`docker compose up -d db`); superadmin con `manage.py init_admin`.
 4. **No ensuciar la raiz**: nuevos scripts en `maintenance/`, documentacion en `docs/`, logica de negocio en `apps/`.
 5. **Media por usuario**: mantener archivos de usuario bajo `media/user_{id}/` cuando aplique.
 6. **Borrado fisico con cuidado**: toda eliminacion debe validar propietario y, para rutinas masivas, tener modo simulacion.

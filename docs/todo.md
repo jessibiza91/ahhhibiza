@@ -8,7 +8,7 @@ Routemap de consolidacion: `docs/consolidation_route_map_2026-07-05.md`.
 ## Completado
 
 - [x] Estructura base Django.
-- [x] Base de datos local unica: `db_ahhh.sqlite3`.
+- [x] Base de datos: PostgreSQL 16 vía Docker Compose (migrado desde SQLite).
 - [x] Apps segmentadas: `accounts`, `ads`, `payments`.
 - [x] Registro/login para clientes y profesionales.
 - [x] Panel visual para cliente registrado con favoritos.

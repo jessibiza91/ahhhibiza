@@ -1,5 +1,4 @@
 import os
-import shutil
 import subprocess
 import datetime
 import sys
@@ -21,17 +20,19 @@ def ensure_backup_dir(root_dir):
     return backup_path
 
 def create_backup(root_dir):
-    db_path = os.path.join(root_dir, 'db.sqlite3')
-    if not os.path.exists(db_path):
-        print_status("[INFO] No se encontró base de datos para respaldar (es normal si es la primera vez).", YELLOW)
-        return False
-    
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_dir = ensure_backup_dir(root_dir)
-    backup_file = os.path.join(backup_dir, f"db_backup_{timestamp}.sqlite3")
-    
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_file = os.path.join(backup_dir, f"db_backup_{timestamp}.sql")
+
     try:
-        shutil.copy2(db_path, backup_file)
+        with open(backup_file, 'wb') as f:
+            result = subprocess.run(
+                ["docker", "compose", "exec", "-T", "db", "pg_dump", "-U", "ahhh_user", "-d", "ahhh_db"],
+                cwd=root_dir, stdout=f
+            )
+        if result.returncode != 0:
+            print_status(f"[ERROR] Fallo al crear respaldo (revisa que el contenedor 'db' este arriba).", RED)
+            sys.exit(1)
         print_status(f"[RESPALDO] Base de datos guardada en: {backup_file}", GREEN)
         return True
     except Exception as e:
