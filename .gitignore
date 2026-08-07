@@ -11,6 +11,7 @@ __pycache__/
 # Datos locales y contenido de usuarios
 db_ahhh.sqlite3
 media/
+staticfiles/
 backups/
 
 # Artefactos y herramientas

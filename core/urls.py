@@ -10,4 +10,9 @@ urlpatterns = [
     path('accounts/', include('apps.accounts.urls')),
     path('', include('apps.ads.urls')),
     path('', home, name='home'),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+# /media/ solo lo sirve Django en desarrollo. En produccion lo sirve nginx
+# (ver docs/despliegue.md). El helper static() devuelve [] cuando DEBUG=False.
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
