@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
@@ -17,6 +18,9 @@ def env_bool(name, default=False):
 
 
 DEBUG = env_bool('AHHH_DEBUG', False)
+
+# True durante la suite de tests (manage.py test fuerza DEBUG=False).
+TESTING = 'test' in sys.argv
 
 SECRET_KEY = os.getenv('AHHH_SECRET_KEY')
 if not SECRET_KEY:
@@ -50,7 +54,7 @@ INSTALLED_APPS = [
     # Apps
     'apps.accounts',
     'apps.ads',
-    'apps.payments',
+    'apps.payments.apps.PaymentsConfig',
     'core',
 ]
 
@@ -115,6 +119,9 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Rate limiting para login y registros (formato django-ratelimit: "5/h", "10/5m", ...)
 AHHH_AUTH_RATE = os.getenv('AHHH_AUTH_RATE', '5/h')
+
+# Pasarela de pagos activa ('dummy' en desarrollo). Ver apps/payments/gateways/.
+AHHH_PAYMENT_GATEWAY = os.getenv('AHHH_PAYMENT_GATEWAY', 'dummy')
 
 # Cache: locmem por defecto (dev). En produccion usar Redis para que el rate
 # limiting sea compartido entre todos los workers de gunicorn.
