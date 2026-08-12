@@ -1,7 +1,9 @@
 import logging
 
 from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
@@ -10,8 +12,9 @@ from django_ratelimit.decorators import ratelimit
 
 from apps.accounts.models import CustomUser
 from . import services
+from .forms import TangasPackageForm
 from .gateways import get_active_gateway
-from .models import RechargeOrder, WebhookLog
+from .models import RechargeOrder, TangasPackage, WebhookLog
 
 logger = logging.getLogger(__name__)
 
@@ -151,3 +154,49 @@ def recharge_cancel(request, order_id):
     services.cancel_payment(order)
     messages.info(request, 'Recarga cancelada. No se ha cobrado nada.')
     return redirect('payments:recharge_result', order_id=order.id)
+
+
+@staff_member_required
+def control_tangas_packages(request):
+    packages = (
+        TangasPackage.objects
+        .annotate(order_count=Count('orders'))
+        .order_by('sort_order', 'price_eur', 'name')
+    )
+    return render(request, 'dashboard/control_tangas_packages.html', {
+        'packages': packages,
+    })
+
+
+@staff_member_required
+def control_tangas_package_edit(request, pk=None):
+    package = get_object_or_404(TangasPackage, pk=pk) if pk else None
+    saved = False
+
+    if request.method == 'POST':
+        form = TangasPackageForm(request.POST, instance=package)
+        if form.is_valid():
+            package = form.save()
+            saved = True
+    else:
+        form = TangasPackageForm(instance=package)
+
+    return render(request, 'dashboard/control_tangas_package_form.html', {
+        'form': form,
+        'package': package,
+        'saved': saved,
+    })
+
+
+@staff_member_required
+@require_POST
+def control_tangas_package_delete(request, pk):
+    package = get_object_or_404(TangasPackage, pk=pk)
+    if package.orders.exists():
+        package.is_active = False
+        package.save(update_fields=['is_active', 'updated_at'])
+        messages.success(request, 'El paquete tenia compras asociadas y se ha desactivado.')
+    else:
+        package.delete()
+        messages.success(request, 'Paquete eliminado.')
+    return redirect('payments:control_tangas_packages')

@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-8 sm:py-10">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-5 mb-6">
+            <div>
+                <p class="text-sm font-bold uppercase tracking-widest text-fuchsia-600">Paquete de Tangas</p>
+                <h1 class="text-3xl sm:text-4xl font-serif font-bold text-slate-900 mt-2">{% if package %}Editar paquete{% else %}Crear paquete{% endif %}</h1>
+                <p class="text-slate-500 mt-2">Define cuantas Tangas recibe el usuario y cuanto paga.</p>
+            </div>
+            <a href="{% url 'payments:control_tangas_packages' %}" class="h-11 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold flex items-center gap-2">
+                <i class="fas fa-arrow-left"></i> Paquetes
+            </a>
+        </div>
+
+        {% if saved %}
+        <div class="mb-5 rounded-2xl border border-green-100 bg-green-50 p-4 text-sm font-bold text-green-700">
+            Paquete guardado correctamente.
+        </div>
+        {% endif %}
+
+        {% if form.errors %}
+        <div class="mb-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+            Revisa los campos marcados.
+        </div>
+        {% endif %}
+
+        <form method="post" class="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Nombre del paquete</label>
+                    {{ form.name }}
+                    {% for error in form.name.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                    <p class="text-xs text-slate-400 mt-2">Ejemplo: "Pack Inicio", "Pack Pro", "Pack VIP".</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Cantidad de Tangas</label>
+                    {{ form.tangas_amount }}
+                    {% for error in form.tangas_amount.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                    <p class="text-xs text-slate-400 mt-2">Las Tangas que recibira el usuario al pagar.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Precio en euros</label>
+                    {{ form.price_eur }}
+                    {% for error in form.price_eur.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                    <p class="text-xs text-slate-400 mt-2">Cuanto se cobra al usuario (con decimales, ej. 15.00).</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Orden de aparicion</label>
+                    {{ form.sort_order }}
+                    {% for error in form.sort_order.errors %}<p class="text-sm text-red-600 mt-2">{{ error }}</p>{% endfor %}
+                    <p class="text-xs text-slate-400 mt-2">Numero mas bajo = aparece antes en la cartera.</p>
+                </div>
+                <label class="md:col-span-2 flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-100 p-4 font-bold text-slate-700">
+                    {{ form.is_active }}
+                    Paquete activo y visible en la web
+                </label>
+            </div>
+            <button type="submit" class="mt-6 h-12 px-6 rounded-xl bg-slate-900 text-white font-bold">
+                <i class="fas fa-save mr-2"></i> Guardar paquete
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
