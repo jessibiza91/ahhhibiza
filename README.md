@@ -110,6 +110,7 @@ Orden recomendado para un dev nuevo o tras clonar: `SETUP.bat` → `SMART_MIGRAT
 | `AHHH_ADMIN_PASSWORD`       | Password del superadmin                   | (obligatorio)      |
 | `AHHH_PAYMENT_GATEWAY`      | Pasarela de pago activa (`dummy` en desarrollo) | `dummy`      |
 | `AHHH_PAYMENT_MODE`         | Modo de la pasarela: `test` o `live`      | `test`             |
+| `AHHH_PUBLIC_BASE_URL`      | Origen publico (sin barra final); base de la URL del webhook de pagos | vacio |
 
 `.env` esta en `.gitignore`: nunca se sube al repositorio. Solo se versiona `.env.example`. Las claves privadas de la pasarela real van solo en el `.env` (ver `docs/pagos_pasarela.md`).
 

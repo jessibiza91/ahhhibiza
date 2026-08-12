@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.accounts.models import CustomUser
@@ -232,3 +232,19 @@ class RechargeFlowTest(TestCase):
         self.professional.refresh_from_db()
         self.assertEqual(self.professional.tangas_balance, Decimal('0.00'))
         self.assertFalse(Transaction.objects.filter(recharge_order=order).exists())
+
+
+class PublicWebhookUrlTest(TestCase):
+    def test_returns_relative_path_without_setting(self):
+        with override_settings(AHHH_PUBLIC_BASE_URL=''):
+            self.assertEqual(
+                services.public_webhook_url(),
+                reverse('payments:payment_webhook'),
+            )
+
+    def test_returns_absolute_url_with_setting_and_strips_slash(self):
+        with override_settings(AHHH_PUBLIC_BASE_URL='https://www.ahhh-ibiza.com/'):
+            self.assertEqual(
+                services.public_webhook_url(),
+                'https://www.ahhh-ibiza.com' + reverse('payments:payment_webhook'),
+            )

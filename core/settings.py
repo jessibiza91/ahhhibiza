@@ -128,6 +128,11 @@ AHHH_PAYMENT_MODE = os.getenv('AHHH_PAYMENT_MODE', 'test').strip().lower()
 if AHHH_PAYMENT_MODE not in {'test', 'live'}:
     raise ImproperlyConfigured('AHHH_PAYMENT_MODE debe ser "test" o "live".')
 
+# Origen publico canonico (sin barra final), p.ej. https://www.ahhh-ibiza.com.
+# Es la URL que la pasarela usara para llamar al webhook de pagos. En desarrollo
+# puede dejarse vacio; en produccion debe apuntar al dominio final con HTTPS.
+AHHH_PUBLIC_BASE_URL = os.getenv('AHHH_PUBLIC_BASE_URL', '').rstrip('/')
+
 # Cache: locmem por defecto (dev). En produccion usar Redis para que el rate
 # limiting sea compartido entre todos los workers de gunicorn.
 if os.getenv('AHHH_REDIS_URL'):

@@ -91,13 +91,32 @@ Variables en `.env` (ver `.env.example`):
 | ---------------------- | ----------------------- | --------------------------------------------- |
 | `AHHH_PAYMENT_GATEWAY` | `dummy`, o nueva        | Pasarela activa. `dummy` solo en desarrollo.  |
 | `AHHH_PAYMENT_MODE`    | `test`, `live`          | Modo de operacion. Validado al arrancar.      |
+| `AHHH_PUBLIC_BASE_URL` | URL, sin barra final    | Origen publico (ej. `https://www.ahhh-ibiza.com`). Se usa para construir la URL del webhook que configura la pasarela. |
 
 - `test` (sandbox): la pasarela opera sin cobrar, para probar.
 - `live`: cobros reales. Al cambiar el modo hay que asegurar que la pasarela
   real esta activa, porque `dummy` se bloquea en produccion.
+- `AHHH_PUBLIC_BASE_URL`: en produccion debe apuntar al dominio final con
+  HTTPS. En desarrollo local puede dejarse vacio.
 
 Las claves privadas de la pasarela real (secret keys) van en el `.env` local o
 del servidor, NUNCA en el repositorio. Solo se versiona `.env.example`.
+
+## URL publica del webhook
+
+El endpoint que la pasarela debe configurar como "webhook URL" es
+`/pagos/webhook/`, y en produccion su forma absoluta es:
+
+```
+{AHHH_PUBLIC_BASE_URL}/pagos/webhook/
+```
+
+El helper `apps/payments/services.py: public_webhook_url()` construye esa URL
+desde `AHHH_PUBLIC_BASE_URL` (si no esta definido devuelve solo la ruta
+relativa). Es el unico punto de verdad: cuando se conecte una pasarela real,
+basta con leer esa URL y configurarla en el panel de la pasarela. La URL
+resuelve a `views.payment_webhook`, que ya esta preparada para recibir
+notificaciones (csrf_exempt y validacion de firma por pasarela).
 
 ## Como anadir una pasarela nueva
 
@@ -138,7 +157,8 @@ su API al contrato de `BaseGateway`.
 2. **HTTPS para el webhook.** Las pasarelas reales exigen que la URL de
    notificacion este en HTTPS con certificado valido. El despliegue de
    `docs/despliegue.md` ya plantea nginx + HTTPS; el webhook debe apuntar a la
-   URL publica final, no a `localhost`.
+   URL publica final (`AHHH_PUBLIC_BASE_URL + /pagos/webhook/`, ver
+   `public_webhook_url()`), no a `localhost`.
 
 3. **Firma del webhook.** La pasarela real debe firmar sus notificaciones y
    `verify_webhook` debe comprobarla (el `dummy` devuelve `True` siempre, solo
