@@ -1,8 +1,10 @@
 import logging
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
 from django.utils import timezone
+
+from apps.accounts.models import CustomUser
 
 from .gateways import get_active_gateway
 from .models import RechargeOrder, TangasPackage, Transaction
@@ -71,11 +73,18 @@ def confirm_payment(order, gateway_order_id=None, paid_amount=None, paid_currenc
     """
     order = RechargeOrder.objects.select_for_update().get(pk=order.pk)
 
-    if paid_amount is not None and Decimal(paid_amount) != order.amount_eur:
-        raise ValueError(
-            f'Importe pagado ({paid_amount}) no coincide con la orden '
-            f'({order.amount_eur} {order.currency}).'
-        )
+    if paid_amount is not None:
+        try:
+            paid_amount_decimal = Decimal(
+                str(paid_amount).strip().replace(',', '.')
+            )
+        except (InvalidOperation, ValueError, TypeError):
+            raise ValueError(f'Importe pagado no válido: {paid_amount!r}')
+        if paid_amount_decimal != order.amount_eur:
+            raise ValueError(
+                f'Importe pagado ({paid_amount}) no coincide con la orden '
+                f'({order.amount_eur} {order.currency}).'
+            )
     if paid_currency and paid_currency.upper() != order.currency:
         raise ValueError(
             f'Moneda pagada ({paid_currency}) no coincide con la orden ({order.currency}).'
@@ -92,7 +101,7 @@ def confirm_payment(order, gateway_order_id=None, paid_amount=None, paid_currenc
     if gateway_order_id:
         order.gateway_order_id = gateway_order_id
 
-    user = order.user
+    user = CustomUser.objects.select_for_update().get(pk=order.user_id)
     user.tangas_balance += order.tangas_amount
     user.save(update_fields=['tangas_balance'])
 

@@ -18,7 +18,7 @@ class DummyGateway(BaseGateway):
     def create_checkout(self, order):
         return {
             'checkout_url': reverse(
-                'payments:recharge_success',
+                'payments:dummy_checkout',
                 kwargs={'order_id': order.id},
             ),
             'gateway_order_id': f'dummy-{order.id}',
@@ -31,7 +31,9 @@ class DummyGateway(BaseGateway):
 
     def parse_event(self, request):
         return {
-            'event_type': 'payment.succeeded',
+            'event_type': request.POST.get('event_type', 'payment.succeeded'),
             'gateway_order_id': request.POST.get('gateway_order_id', ''),
+            'amount': request.POST.get('amount'),
+            'currency': request.POST.get('currency', 'EUR'),
             'raw': dict(request.POST),
         }

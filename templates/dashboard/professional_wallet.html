@@ -17,29 +17,51 @@
         <div class="rounded-lg bg-slate-900 text-white p-6">
             <p class="text-sm text-slate-300">Saldo disponible</p>
             <p class="text-5xl font-bold mt-2">{{ user.tangas_balance }} T</p>
-            <a href="mailto:{{ support_email }}?subject=Solicitud%20de%20recarga%20de%20Tangas" class="mt-6 h-12 px-5 rounded-lg bg-amber-400 text-slate-950 font-bold flex items-center justify-center gap-2">
-                <i class="fas fa-envelope"></i>Solicitar recarga
-            </a>
+            <p class="text-xs text-slate-400 mt-4">
+                ¿Necesitas una recarga especial?
+                <a href="mailto:{{ support_email }}" class="underline text-amber-300">Escríbenos</a>.
+            </p>
         </div>
 
         <div class="bg-white border border-slate-100 rounded-lg p-5">
-            <h2 class="text-xl font-bold text-slate-900">Promociones disponibles</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                {% for product in products %}
-                <article class="rounded-lg border border-slate-200 p-4">
-                    <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <h3 class="font-bold text-slate-900">{{ product.name }}</h3>
-                            <p class="text-sm text-slate-500 mt-1">{{ product.description|default:"Promocion para anuncios." }}</p>
-                        </div>
-                        <strong class="text-fuchsia-700 whitespace-nowrap">{{ product.price_tangas }} T</strong>
-                    </div>
-                    <p class="text-xs text-slate-400 mt-3">{{ product.duration_days }} dias · {{ product.get_visibility_display }}</p>
-                </article>
+            <h2 class="text-xl font-bold text-slate-900">Recargar Tangas</h2>
+            <p class="text-sm text-slate-500 mt-1">Elige un paquete y paga de forma segura.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+                {% for package in packages %}
+                <form action="{% url 'payments:recharge_start' %}" method="post" class="rounded-lg border border-slate-200 p-4 flex flex-col">
+                    {% csrf_token %}
+                    <input type="hidden" name="package_id" value="{{ package.id }}">
+                    <h3 class="font-bold text-slate-900">{{ package.name }}</h3>
+                    <p class="text-sm text-slate-500 mt-1">{{ package.tangas_amount }} Tangas</p>
+                    <strong class="text-fuchsia-700 mt-2 text-lg">{{ package.price_eur|floatformat:2 }} €</strong>
+                    <button type="submit" class="mt-4 h-10 rounded-lg bg-slate-900 text-white text-sm font-bold flex items-center justify-center gap-2">
+                        <i class="fas fa-credit-card"></i>Pagar
+                    </button>
+                </form>
                 {% empty %}
-                <p class="text-sm text-slate-400">No hay promociones activas.</p>
+                <p class="text-sm text-slate-400">No hay paquetes de recarga disponibles.</p>
                 {% endfor %}
             </div>
+        </div>
+    </section>
+
+    <section class="bg-white border border-slate-100 rounded-lg p-5 mb-8">
+        <h2 class="text-xl font-bold text-slate-900">Promociones disponibles</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+            {% for product in products %}
+            <article class="rounded-lg border border-slate-200 p-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="font-bold text-slate-900">{{ product.name }}</h3>
+                        <p class="text-sm text-slate-500 mt-1">{{ product.description|default:"Promocion para anuncios." }}</p>
+                    </div>
+                    <strong class="text-fuchsia-700 whitespace-nowrap">{{ product.price_tangas }} T</strong>
+                </div>
+                <p class="text-xs text-slate-400 mt-3">{{ product.duration_days }} dias · {{ product.get_visibility_display }}</p>
+            </article>
+            {% empty %}
+            <p class="text-sm text-slate-400">No hay promociones activas.</p>
+            {% endfor %}
         </div>
     </section>
 

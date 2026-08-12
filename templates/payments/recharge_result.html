@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-8 sm:py-10 max-w-xl">
+    <section class="bg-white border border-slate-100 rounded-lg overflow-hidden text-center">
+        <div class="p-8">
+            {% if order.status == 'PAID' %}
+            <div class="mx-auto h-16 w-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl">
+                <i class="fas fa-check"></i>
+            </div>
+            <h1 class="mt-4 text-2xl font-bold text-slate-900">Recarga completada</h1>
+            <p class="mt-2 text-slate-500">
+                Se han añadido <strong class="text-fuchsia-700">{{ order.tangas_amount }} T</strong> a tu saldo
+                ({{ order.amount_eur|floatformat:2 }} {{ order.currency }}).
+            </p>
+            <p class="mt-1 text-sm text-slate-400">El movimiento ya aparece en tu cartera.</p>
+            {% elif order.status == 'CANCELLED' %}
+            <div class="mx-auto h-16 w-16 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-3xl">
+                <i class="fas fa-times"></i>
+            </div>
+            <h1 class="mt-4 text-2xl font-bold text-slate-900">Recarga cancelada</h1>
+            <p class="mt-2 text-slate-500">No se ha cobrado nada y tu saldo no ha cambiado.</p>
+            {% elif order.status == 'FAILED' %}
+            <div class="mx-auto h-16 w-16 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-3xl">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h1 class="mt-4 text-2xl font-bold text-slate-900">El pago no se completó</h1>
+            <p class="mt-2 text-slate-500">La recarga no se ha acreditado. Puedes intentarlo de nuevo.</p>
+            {% elif order.status == 'REFUNDED' %}
+            <div class="mx-auto h-16 w-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-3xl">
+                <i class="fas fa-rotate-left"></i>
+            </div>
+            <h1 class="mt-4 text-2xl font-bold text-slate-900">Recarga reembolsada</h1>
+            <p class="mt-2 text-slate-500">Esta orden fue reembolsada por el equipo de la plataforma.</p>
+            {% else %}
+            <div class="mx-auto h-16 w-16 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-3xl">
+                <i class="fas fa-hourglass-half"></i>
+            </div>
+            <h1 class="mt-4 text-2xl font-bold text-slate-900">Recarga pendiente</h1>
+            <p class="mt-2 text-slate-500">El pago aún no se ha confirmado.</p>
+            {% endif %}
+        </div>
+
+        <div class="p-6 border-t border-slate-100">
+            <a href="{% url 'professional_wallet' %}" class="inline-flex h-11 px-5 rounded-lg bg-slate-900 text-white font-bold items-center justify-center gap-2">
+                <i class="fas fa-wallet"></i>Volver a mi cartera
+            </a>
+        </div>
+    </section>
+</div>
+{% endblock %}

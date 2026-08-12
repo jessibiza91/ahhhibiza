@@ -20,7 +20,7 @@ from .utils import safe_file_size
 from django.http import JsonResponse
 from django.utils.http import url_has_allowed_host_and_scheme
 from apps.ads.models import Ad, AdImage, PromotionProduct
-from apps.payments.models import Transaction
+from apps.payments.models import TangasPackage, Transaction
 
 logger = logging.getLogger(__name__)
 
@@ -207,9 +207,11 @@ def professional_wallet(request):
         'price_tangas',
         '-priority_weight',
     )
+    packages = TangasPackage.objects.filter(is_active=True)
     return render(request, 'dashboard/professional_wallet.html', {
         'transactions': transactions,
         'products': products,
+        'packages': packages,
     })
 
 

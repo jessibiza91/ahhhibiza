@@ -9,6 +9,7 @@ urlpatterns = [
     path('health/', health, name='health'),
     path('admin/', admin.site.urls),
     path('accounts/', include('apps.accounts.urls')),
+    path('pagos/', include('apps.payments.urls')),
     path('', include('apps.ads.urls')),
     path('', home, name='home'),
 ]
