@@ -123,6 +123,11 @@ AHHH_AUTH_RATE = os.getenv('AHHH_AUTH_RATE', '5/h')
 # Pasarela de pagos activa ('dummy' en desarrollo). Ver apps/payments/gateways/.
 AHHH_PAYMENT_GATEWAY = os.getenv('AHHH_PAYMENT_GATEWAY', 'dummy')
 
+# Modo de operacion de la pasarela: 'test' (sandbox, sin cobros) o 'live' (produccion).
+AHHH_PAYMENT_MODE = os.getenv('AHHH_PAYMENT_MODE', 'test').strip().lower()
+if AHHH_PAYMENT_MODE not in {'test', 'live'}:
+    raise ImproperlyConfigured('AHHH_PAYMENT_MODE debe ser "test" o "live".')
+
 # Cache: locmem por defecto (dev). En produccion usar Redis para que el rate
 # limiting sea compartido entre todos los workers de gunicorn.
 if os.getenv('AHHH_REDIS_URL'):

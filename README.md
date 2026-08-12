@@ -5,7 +5,7 @@ Marketplace/directorio adulto para profesionales y usuarios registrados.
 - Los visitantes ven contenido publico.
 - Los usuarios registrados desbloquean contenido privado/HOT.
 - Los profesionales gestionan su perfil, anuncios, media y saldo de Tangas.
-- El superusuario (staff) administra todo desde el panel de control `/control/` (y el admin de Django en `/admin/`): gestiona profesionales, clientes, anuncios, media, movimientos de saldo, servicios, promociones, configuracion del sitio y la papelera (moderacion y restauracion). Tambien puede hacer recargas manuales de Tangas.
+- El superusuario (staff) administra todo desde el panel de control `/control/` (y el admin de Django en `/admin/`): gestiona profesionales, clientes, anuncios, media, movimientos de saldo, servicios, promociones, configuracion del sitio y la papelera (moderacion y restauracion). Tambien puede hacer recargas manuales de Tangas y configurar los paquetes de Tangas que los profesionales compran online.
 
 ## Stack
 
@@ -23,7 +23,7 @@ Marketplace/directorio adulto para profesionales y usuarios registrados.
 apps/
   accounts/   usuarios, perfiles, registro, dashboard profesional
   ads/        anuncios, servicios, galerias publica/HOT
-  payments/   transacciones y saldo de Tangas
+  payments/   saldo de Tangas, paquetes, recarga online y pasarela de pago
 core/         settings, urls y vista home
 templates/    plantillas Django
 static/       CSS, JS e imagenes base
@@ -101,8 +101,10 @@ Orden recomendado para un dev nuevo o tras clonar: `SETUP.bat` → `SMART_MIGRAT
 | `AHHH_DB_PORT`              | Puerto de PostgreSQL                      | `5432`             |
 | `AHHH_ADMIN_USERNAME`       | Usuario superadmin (para `init_admin`)    | `Patricia`         |
 | `AHHH_ADMIN_PASSWORD`       | Password del superadmin                   | (obligatorio)      |
+| `AHHH_PAYMENT_GATEWAY`      | Pasarela de pago activa (`dummy` en desarrollo) | `dummy`      |
+| `AHHH_PAYMENT_MODE`         | Modo de la pasarela: `test` o `live`      | `test`             |
 
-`.env` esta en `.gitignore`: nunca se sube al repositorio. Solo se versiona `.env.example`.
+`.env` esta en `.gitignore`: nunca se sube al repositorio. Solo se versiona `.env.example`. Las claves privadas de la pasarela real van solo en el `.env` (ver `docs/pagos_pasarela.md`).
 
 ## Produccion
 
@@ -117,7 +119,10 @@ pensado para que lo ejecute una persona sin experiencia en despliegues:
 
 Guia paso a paso en `docs/despliegue.md`.
 
-Pendiente de definir: la pasarela de pago para la compra de Tangas.
+Los profesionales compran Tangas online: la pasarela esta abstraida tras una
+interfaz comun y en desarrollo usa `dummy` (no cobra nada). Pendiente elegir una
+pasarela real adulto-friendly y conectar su webhook con firma en HTTPS.
+Detalle y arquitectura en `docs/pagos_pasarela.md`.
 
 Mas detalle en `docs/roadmap.md` (vision y fases maestras) y `docs/state_of_play.md` (estado actual del proyecto).
 
@@ -128,4 +133,5 @@ Mas detalle en `docs/roadmap.md` (vision y fases maestras) y `docs/state_of_play
 - `docs/roadmap.md`
 - `docs/state_of_play.md`
 - `docs/todo.md`
+- `docs/pagos_pasarela.md` — pasarela de pago: arquitectura y como anadir una real
 - `docs/handover_report.md` — reglas clave para contribuir (no ensuciar la raiz, actualizar docs, etc.)

@@ -30,6 +30,13 @@ Routemap de consolidacion: `docs/consolidation_route_map_2026-07-05.md`.
 - [x] Suite automatizada inicial de 24 pruebas criticas.
 - [x] Launcher `VERIFY_PROJECT.bat`.
 - [x] Semillado de categorias convertido en management command.
+- [x] Recarga online de Tangas con pasarela abstraida (BaseGateway + registry + dummy).
+- [x] Webhook de pago con validacion de importe/moneda, acreditacion atomica e idempotente.
+- [x] Gestion visual de paquetes de Tangas (crear, editar, desactivar, eliminar) en panel de control.
+- [x] Paquetes de Tangas, ordenes de recarga y logs de webhook registrados en Django Admin.
+- [x] Variable de entorno `AHHH_PAYMENT_MODE` (test/live) validada al arrancar.
+- [x] Documento de pasarela: `docs/pagos_pasarela.md`.
+- [x] Suite ampliada a 63 tests (flujo de recarga, idempotencia, control de paquetes).
 
 ## Ahora - Fase 1: Estabilizacion Tecnica
 
@@ -70,9 +77,15 @@ Routemap de consolidacion: `docs/consolidation_route_map_2026-07-05.md`.
 
 ## Fase 3: Cuotas, Pagos y Retencion
 
+- [x] Compra online de Tangas con pasarela simulada (dummy) para desarrollo.
+- [x] Estados de orden de recarga: PENDING, PAID, FAILED, CANCELLED, REFUNDED.
+- [x] Acreditacion de saldo atomica e idempotente con `select_for_update`.
+- [ ] Elegir pasarela real adulto-friendly y conectarla al contrato `BaseGateway`.
+- [ ] Firmar y validar webhook real + URL HTTPS publica para notificaciones.
 - [ ] Definir modelo de suscripcion profesional.
 - [ ] Guardar ultima actividad real del profesional.
-- [ ] Implementar estados de pago: activo, impagado, gracia, suspendido, eliminado.
+- [ ] Implementar estados de pago de profesional: activo, impagado, gracia, suspendido, eliminado.
+- [ ] Politica de reembolso (el stub `refund_order` no descuenta Tangas ya gastadas).
 - [ ] Crear comando de limpieza con modo simulacion.
 - [ ] Crear launcher `.bat` para auditoria/limpieza segura.
 - [ ] Documentar politica final de retencion.
@@ -126,6 +139,10 @@ Routemap de consolidacion: `docs/consolidation_route_map_2026-07-05.md`.
 - [x] Auditoria completa de rutas administrativas sin fugas operativas a `/admin/`.
 - [x] Auditoria completa de rutas cliente y profesional sin fugas a `/admin/`.
 - [x] Cartera profesional visual para Tangas y solicitud de recarga.
+- [x] Pago online de la recarga: orden PENDING, checkout, webhook y acreditacion.
+- [x] Control visual de paquetes de Tangas (precio, cantidad, orden, activo).
+- [x] Gestion de paquetes/ordenes/webhooks tambien desde Django Admin.
+- [ ] Mostrar historial de ordenes de recarga en la cartera profesional.
 - [x] Navegacion funcional entre informacion publica y contenido HOT.
 - [x] Corregir desbordamiento de cabecera profesional con nombres largos.
 - [ ] Historial/auditoria de acciones de moderacion.

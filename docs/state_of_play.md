@@ -1,6 +1,6 @@
 # Estado Actual - Ahhh! Ibiza
 
-Ultima revision: 2026-07-05.
+Ultima revision: 2026-08-12.
 
 Documentos de referencia:
 
@@ -8,12 +8,13 @@ Documentos de referencia:
 - `docs/consolidation_route_map_2026-07-05.md`: ejecucion activa.
 - `docs/ux_product_audit_2026-06-20.md`: auditoria de producto y UX.
 - `docs/cableado_flows_audit_2026-06-20.md`: auditoria funcional.
+- `docs/pagos_pasarela.md`: pasarela de pago (arquitectura y pendientes).
 
 ## Estado General
 
-La plataforma es un prototipo avanzado funcional en consolidacion. Los flujos principales de cliente, profesional y superadmin existen, y las rutas criticas tienen una primera suite automatizada.
+La plataforma es un prototipo avanzado funcional en consolidacion. Los flujos principales de cliente, profesional y superadmin existen, y las rutas criticas tienen una primera suite automatizada (63 tests).
 
-No esta lista para produccion comercial: faltan cerrar el ciclo real de Tangas, pagos, retencion, auditoria de moderacion y despliegue.
+El ciclo de compra online de Tangas esta implementado con una pasarela simulada (`dummy`) que permite probar de punta a punta sin cobrar. No esta lista para cobrar de verdad: falta elegir una pasarela adulto-friendly, conectar su webhook con firma en HTTPS y cerrar pagos, retencion y auditoria de moderacion.
 
 ## Funcionalidad Estable
 
@@ -35,6 +36,7 @@ No esta lista para produccion comercial: faltan cerrar el ciclo real de Tangas, 
 - Eleccion de producto de promocion.
 - Dashboard visual responsive.
 - Vista privada de clientes que marcaron sus anuncios como favoritos.
+- Cartera de Tangas con saldo, movimientos, solicitud y compra online de recarga (pasarela dummy en desarrollo).
 
 ### Superadmin
 
@@ -63,6 +65,11 @@ No esta lista para produccion comercial: faltan cerrar el ciclo real de Tangas, 
 - Listados visuales globales de anuncios, materiales y movimientos.
 - Gestion visual de servicios y configuracion global.
 - Cartera profesional visual con saldo, promociones, movimientos y solicitud de recarga.
+- Compra online de Tangas: orden PENDING, checkout, webhook y acreditacion atomica e idempotente.
+- Control visual de paquetes de Tangas (crear, editar, desactivar) desde el panel.
+- Paquetes, ordenes y logs de webhook tambien registrados en Django Admin.
+- Pasarela aislada tras `BaseGateway` + registry; `dummy` bloqueada en produccion.
+- `AHHH_PAYMENT_MODE` (test/live) validado al arrancar.
 - Rutas cliente y profesional auditadas sin fugas a Django.
 - Navegacion compacta en telefono.
 - Barra de contacto fija en detalle para telefono.
@@ -72,25 +79,28 @@ No esta lista para produccion comercial: faltan cerrar el ciclo real de Tangas, 
 - `python manage.py check`: correcto.
 - `python manage.py check --deploy` con variables de produccion: correcto.
 - `python manage.py makemigrations --check --dry-run`: sin cambios.
-- `python manage.py test`: 9 tests correctos.
+- `python manage.py test`: 63 tests correctos (filtros, roles, HOT, favoritos, papelera, restauracion, superadmin, recarga online y control de paquetes).
 - Revision responsive en navegador a 360, 768 y 1280 px: sin desbordamiento horizontal.
 - Filtros combinados y resultado de portada comprobados en navegador.
 - Dato temporal de revision visual eliminado al finalizar.
 
 ## Pendiente Prioritario
 
-1. Dividir la ficha extensa de superadmin en secciones o pestanas.
-2. Revisar visualmente formularios autenticados de perfil y anuncio en telefono real.
-3. Incorporar estados de subida y mensajes de exito/error mas claros.
-4. Registrar acciones de moderacion.
-5. Definir consumo, caducidad y renovacion de promociones en Tangas.
-6. Definir pago, gracia, suspension y retencion antes de automatizar borrados.
-7. Preparar hosting, dominio, HTTPS, static/media y backups restaurables.
+1. Elegir pasarela de pago real adulto-friendly y conectar su webhook con firma en HTTPS (ver `docs/pagos_pasarela.md`).
+2. Dividir la ficha extensa de superadmin en secciones o pestanas.
+3. Revisar visualmente formularios autenticados de perfil y anuncio en telefono real.
+4. Incorporar estados de subida y mensajes de exito/error mas claros.
+5. Registrar acciones de moderacion.
+6. Definir consumo, caducidad y renovacion de promociones en Tangas.
+7. Definir pago, gracia, suspension y retencion antes de automatizar borrados.
+8. Preparar hosting, dominio, HTTPS, static/media y backups restaurables.
 
 ## Decisiones Pendientes
 
-- Hosting y dominio final.
+- Hosting y dominio final (condiciona el webhook HTTPS de la pasarela).
+- Pasarela de pago real adulto-friendly y precio final de los paquetes de Tangas.
 - Regla exacta de consumo y renovacion de Tangas.
+- Politica de reembolso de recargas.
 - Periodos de gracia y retencion por impago o inactividad.
 - Cuota inicial de almacenamiento.
 - Conservacion o retirada del entorno `.venv`; los launchers usan `venv`.
