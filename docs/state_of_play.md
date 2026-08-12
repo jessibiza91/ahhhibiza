@@ -58,6 +58,7 @@ El ciclo de compra online de Tangas esta implementado con una pasarela simulada 
 - Hosts de desarrollo explicitos y protecciones HTTPS para `DEBUG=False`.
 - `.env.example` y `.gitignore`.
 - `seed_tags.py` sustituido por `python manage.py seed_service_tags`.
+- Paquetes de Tangas iniciales con `python manage.py seed_tangas_packages` (idempotente: no duplica ni pisa ediciones de Patricia).
 - `CLEAN_CACHE.bat` usa la limpieza con exclusiones seguras.
 - `VERIFY_PROJECT.bat` ejecuta checks, migraciones y tests.
 - Suite de 24 tests para filtros, roles, HOT, favoritos, papelera, restauracion y superadmin.

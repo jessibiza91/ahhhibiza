@@ -66,6 +66,13 @@ python manage.py init_admin
 python manage.py runserver
 ```
 
+> Paso 7 opcional — datos de ejemplo (idempotentes, no pisan ediciones): las categorias de servicio para anuncios y los paquetes de Tangas para probar la recarga online.
+
+```powershell
+python manage.py seed_service_tags
+python manage.py seed_tangas_packages
+```
+
 > El superusuario se crea con `init_admin` (no `createsuperuser`) usando `AHHH_ADMIN_USERNAME`/`AHHH_ADMIN_PASSWORD` del `.env`; es idempotente. Más detalle en `docs/despliegue.md`.
 
 El sitio quedara disponible en <http://localhost:8000/> y el admin en <http://localhost:8000/admin/>.
