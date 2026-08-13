@@ -1,0 +1,77 @@
+#!/bin/sh
+# Instala/renueva el certificado SSL de Ahhh! Ibiza (Let's Encrypt).
+#
+# Uso (en el servidor, dentro de /opt/ahhh-ibiza):
+#   sudo ./deploy/install_https.sh              # usa AHHH_DOMAIN del .env
+#   sudo ./deploy/install_https.sh midominio.com # o pasa el dominio como argumento
+#
+# Se puede ejecutar las veces que quieras:
+#   1. Crea un certificado autofirmado temporal para que nginx pueda arrancar
+#      aunque el dominio todavia no apunte al servidor.
+#   2. Si el dominio ya apunta al servidor, emite el certificado real.
+#   3. Activa la renovacion automatica (timer ahhh-certbot-renew).
+
+set -e
+
+cd /opt/ahhh-ibiza
+
+DOMAIN="${1:-$(grep -E '^AHHH_DOMAIN=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d '"' | tr -d ' \t\r' )}"
+DOMAIN="${DOMAIN:-ahhh-ibiza.com}"
+
+WEBROOT=/opt/ahhh-ibiza/deploy/certbot/www
+LIVE_DIR=/etc/letsencrypt/live/$DOMAIN
+
+if ! command -v openssl >/dev/null 2>&1; then
+    echo "ERROR: falta openssl. Instalo:  sudo apt install -y openssl"
+    exit 1
+fi
+
+mkdir -p "$WEBROOT"
+
+# Certificado temporal autofirmado: permite que nginx arranque con el bloque
+# 443 del conf incluso antes de tener el certificado real.
+if [ ! -f "$LIVE_DIR/fullchain.pem" ]; then
+    echo "Creando certificado temporal autofirmado para $DOMAIN..."
+    mkdir -p "$LIVE_DIR"
+    openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
+        -keyout "$LIVE_DIR/privkey.pem" \
+        -out "$LIVE_DIR/fullchain.pem" \
+        -subj "/CN=$DOMAIN"
+fi
+
+# Asegura que nginx este levantado (sirve el reto webroot en /.well-known/acme-challenge/).
+docker compose up -d nginx
+
+# Certificado real de Let's Encrypt (solo si el dominio ya resuelve al servidor).
+if command -v certbot >/dev/null 2>&1; then
+    if ! certbot certificates 2>/dev/null | grep -qF "$DOMAIN"; then
+        echo "Solicitando certificado real de Let's Encrypt para $DOMAIN y www.$DOMAIN..."
+        if certbot certonly --webroot -w "$WEBROOT" \
+            --non-interactive --agree-tos --register-unsafely-without-email \
+            -d "$DOMAIN" -d "www.$DOMAIN"; then
+            echo "Certificado real emitido para $DOMAIN."
+        else
+            echo "No se pudo emitir el certificado real (el dominio debe apuntar a este"
+            echo "servidor y permitir el puerto 80). El sitio sigue funcionando con el"
+            echo "certificado temporal; vuelve a ejecutar este script cuando el dominio"
+            echo "resuelva a la IP de este servidor."
+        fi
+    else
+        echo "Ya existe un certificado para $DOMAIN. No se vuelve a emitir."
+    fi
+else
+    echo "AVISO: certbot no esta instalado, no se solicita el certificado real."
+    echo "Cuando lo instales (sudo apt install -y certbot), ejecuta de nuevo este script."
+fi
+
+# Recarga nginx para que use el certificado actual.
+docker compose exec -T nginx nginx -s reload
+
+# Renovacion automatica: timer de systemd que ejecuta deploy/ssl_renew.sh.
+cp deploy/systemd/ahhh-certbot-renew.service /etc/systemd/system/
+cp deploy/systemd/ahhh-certbot-renew.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now ahhh-certbot-renew.timer
+
+echo "Listo. La renovacion automatica esta activa:"
+echo "  systemctl status ahhh-certbot-renew.timer"

@@ -27,7 +27,14 @@ sudo apt install -y docker.io docker-compose-v2
 sudo systemctl enable --now docker
 ```
 
-- (Opcional, para HTTPS) un dominio apuntando al IP del servidor.
+- `certbot` y `openssl` (para el certificado SSL de Let's Encrypt):
+
+```bash
+sudo apt install -y certbot openssl
+```
+
+- (Obligatorio) un dominio apuntando al IP del servidor (registro A de
+  `tu-dominio.com` y `www.tu-dominio.com`) y los puertos 80/443 abiertos.
 
 ## 3. Archivos de despliegue (ya en el repo)
 
@@ -35,8 +42,15 @@ sudo systemctl enable --now docker
 Dockerfile                 Imagen de la app (dependencias prod + entrypoint)
 .dockerignore              Excluye venv, media, .env, .git del build
 deploy/entrypoint.sh       migrate + init_admin + collectstatic + gunicorn
-deploy/nginx/ahhh.conf     Configuracion de nginx (proxy, static, media)
+deploy/install_https.sh    Certificado SSL: temporal + Let's Encrypt + renovacion
+deploy/ssl_renew.sh        Renovacion del certificado (lo ejecuta el timer)
+deploy/certbot/www/        Webroot para el reto ACME de Let's Encrypt
+deploy/nginx/ahhh.conf     Configuracion de nginx (HTTPS, static, media, reto ACME)
+deploy/backup.sh           Copia de seguridad diaria (DB + media) + rotacion
+deploy/restore.sh          Restauracion de una copia (DB o media)
 deploy/systemd/ahhh.service  Unidad systemd que arranca/para el stack
+deploy/systemd/ahhh-certbot-renew.service/.timer  Renovacion automatica del SSL
+deploy/systemd/ahhh-backup.service/.timer         Copias de seguridad diarias (03:15)
 docker-compose.yml         Orquesta db, redis, app y nginx
 requirements/prod.txt      Dependencias de produccion (gunicorn, redis)
 ```
@@ -65,6 +79,8 @@ AHHH_DEBUG=false
 AHHH_SECRET_KEY=<genera una clave larga y aleatoria>
 AHHH_ALLOWED_HOSTS=tu-dominio.com,www.tu-dominio.com
 AHHH_CSRF_TRUSTED_ORIGINS=https://tu-dominio.com,https://www.tu-dominio.com
+AHHH_DOMAIN=tu-dominio.com
+AHHH_PUBLIC_BASE_URL=https://www.tu-dominio.com
 AHHH_POSTGRES_DB=ahhh_db
 AHHH_POSTGRES_USER=ahhh_user
 AHHH_POSTGRES_PASSWORD=<contraseña segura de la base de datos>
@@ -85,9 +101,31 @@ Notas:
   app conecta a la base por el nombre de servicio `db`.
 - `AHHH_REDIS_URL` tampoco: el contenedor `app` ya la inyecta
   (`redis://redis:6379/1`).
+- `AHHH_DOMAIN` se usa para emitir y renovar el certificado SSL; debe ser el
+  dominio sin `www` ni `https://` y coincidir con el de `deploy/nginx/ahhh.conf`.
 - El `.env` no debe versionarse ni compartirse.
 
-### 4.3 Arrancar el stack
+### 4.3 Preparar el certificado (obligatorio antes del primer arranque)
+
+nginx ya escucha en el puerto 443 (ver `deploy/nginx/ahhh.conf`), así que
+necesita un certificado para arrancar. El script `install_https.sh` crea uno
+autofirmado temporal (el sitio funciona aunque el dominio todavía no apunte) y,
+si el dominio ya resuelve al servidor, emite directamente el real de Let's
+Encrypt. Además activa la renovación automática.
+
+```bash
+cd /opt/ahhh-ibiza
+sudo ./deploy/install_https.sh
+```
+
+> Requiere `openssl` (obligatorio) y `certbot` (recomendado para el
+> certificado real) instalados en el host (sección 2). Si `certbot` no está,
+> el script solo crea el temporal y te avisa para que lo instales y repitas.
+
+El script es idempotente: repítelo más adelante (cuando el dominio apunte al
+servidor) para pasar del certificado temporal al real.
+
+### 4.4 Arrancar el stack
 
 ```bash
 sudo docker compose up -d --build
@@ -107,14 +145,20 @@ sudo docker compose ps
 
 Debes ver los 4 contenedores `Up` y con estado `(healthy)`.
 
-### 4.4 Verificar
+### 4.5 Verificar
 
 ```bash
-curl http://localhost/health/
+curl https://localhost/health/ -k
 # -> {"status": "ok"}
 ```
 
-Abre `http://tu-dominio.com` en el navegador y entra en `/admin/` con el
+- `-k` ignora el certificado autofirmado temporal. Cuando el certificado real
+  esté activo, `curl https://tu-dominio.com/health/` funciona sin `-k`.
+- Abre `https://tu-dominio.com` en el navegador. Con el certificado temporal el
+  navegador mostrará una advertencia de seguridad: es esperable hasta que el
+  dominio apunte al servidor y se ejecute de nuevo `install_https.sh`.
+
+Abre `https://tu-dominio.com/admin/` en el navegador y entra con el
 superadmin para comprobar el panel.
 
 ## 5. Gestionar el stack con systemd
@@ -159,41 +203,111 @@ Los datos de la base, media y redis viven en volúmenes Docker
 (`pg_data`, `media_data`, `static_data`, `redis_data`): sobreviven a los
 `up`/`down` y a los reinicios.
 
-## 7. HTTPS con Let's Encrypt (certbot)
+## 7. HTTPS: certificado real de Let's Encrypt
 
-Con nginx en Docker hay dos opciones. La sencilla es añadir un `server`
-443 al config de nginx y renovar manualmente con certbot en el host:
+El stack ya sirve por HTTPS desde el primer arranque, pero con un certificado
+autofirmado temporal (el navegador muestra advertencia). Para obtener el
+certificado real:
 
-```bash
-sudo apt install -y certbot
-sudo certbot certonly --standalone -d tu-dominio.com -d www.tu-dominio.com
-```
+1. Apunta tu dominio al IP del servidor (registro A para `tu-dominio.com` y
+   `www.tu-dominio.com`) y abre los puertos 80 y 443 en el firewall. Let's
+   Encrypt valida el reto a través del puerto 80.
 
-Después añade el bloque HTTPS a `deploy/nginx/ahhh.conf` (ssl_certificate
-apuntando a `/etc/letsencrypt/live/tu-dominio.com/`), redirige el puerto 80 al
-443 y vuelve a levantar nginx:
+2. Instala `certbot` en el host (si no está):
 
-```bash
-sudo docker compose up -d nginx
-```
+   ```bash
+   sudo apt install -y certbot openssl
+   ```
 
-Para renovación automática, un timer de systemd que ejecute
-`certbot renew` y luego `docker compose exec nginx nginx -s reload`.
+3. Ejecuta de nuevo el mismo script del paso 4.3 (esta vez emitirá el
+   certificado real, sin cortar el servicio):
+
+   ```bash
+   cd /opt/ahhh-ibiza
+   sudo ./deploy/install_https.sh
+   ```
+
+4. Verifica:
+
+   ```bash
+   curl https://tu-dominio.com/health/
+   # -> {"status": "ok"}   (sin -k: certificado real válido)
+   ```
+
+Cómo funciona:
+
+- `install_https.sh` usa el reto **webroot** (nginx sirve
+  `/.well-known/acme-challenge/` desde el webroot montado), así que no hay que
+  parar nginx para emitir ni renovar.
+- El mismo script ya activó la **renovación automática** en el paso 4.3: el
+  timer `ahhh-certbot-renew` ejecuta `deploy/ssl_renew.sh` a diario y solo
+  renueva cuando faltan menos de 30 días, recargando nginx sin cortar el
+  servicio. Comprueba que está activo:
+
+  ```bash
+  sudo systemctl status ahhh-certbot-renew.timer
+  ```
+
+- Los certificados viven en `/etc/letsencrypt` (host) y se montan de solo
+  lectura en el contenedor nginx (`docker-compose.yml`). No se pierden al
+  recrear contenedores.
 
 ## 8. Copias de seguridad
 
-Base de datos:
+La copia de seguridad es automatica (DB + media) mediante un timer systemd.
+Requiere `AHHH_BACKUP_RETENTION_DAYS` en `.env` (por defecto 14).
+
+### 8.1 Instalacion
+
+```bash
+sudo cp deploy/systemd/ahhh-backup.service /etc/systemd/system/
+sudo cp deploy/systemd/ahhh-backup.timer   /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now ahhh-backup.timer
+sudo systemctl list-timers | grep ahhh   # comprobar la proxima ejecucion
+```
+
+Se ejecuta a diario a las 03:15 (+/-30 min) y genera:
+
+- `backups/daily/db_ahhh_YYYY-MM-DD.sql.gz`: dump de PostgreSQL (con
+  `--clean --if-exists`, autoclimpiable al restaurar).
+- `backups/daily/media_ahhh_YYYY-MM-DD.tar.gz`: contenido del volumen de media.
+- `backups/monthly/`: copia del dia 1 de cada mes (historico contable, no rota).
+
+Rotacion: se borran los `db_`/`media_` diarios con mas de
+`AHHH_BACKUP_RETENTION_DAYS` dias (por la fecha del nombre del archivo).
+
+### 8.2 Ejecutar a mano
 
 ```bash
 cd /opt/ahhh-ibiza
-sudo docker compose exec -T db pg_dump -U ahhh_user ahhh_db > backups/ahhh_$(date +%F).sql
+sudo ./deploy/backup.sh
 ```
 
-Media (fotos y videos subidos): guarda el volumen `media_data`. Los archivos
-se pueden copiar montando el volumen en un contenedor temporal o con la ruta
-que exponga el volumen en el host (`docker volume inspect ahhh-ibiza_media_data`).
+### 8.3 Restauracion
 
-Programa las copias con `cron` y sácalas del servidor (scp/rclone/S3).
+`deploy/restore.sh` detiene app y nginx durante la restauracion y los reanuda
+al terminar. Requiere confirmacion (escribe `RESTORE`) o `--yes` para saltarla.
+
+```bash
+cd /opt/ahhh-ibiza
+
+# Base de datos (sobreescribe la actual; el dump hace DROP + recreate)
+sudo ./deploy/restore.sh db backups/daily/db_ahhh_2026-01-01.sql.gz
+
+# Media (sobreescribe el volumen de media)
+sudo ./deploy/restore.sh media backups/daily/media_ahhh_2026-01-01.tar.gz
+```
+
+### 8.4 Saca las copias del servidor
+
+La rotacion solo protege contra errores de datos, no contra fallos del disco o
+del servidor. Programa la salida de `backups/` del servidor (scp, rclone o S3)
+a otro sitio, p. ej. con cron diario:
+
+```bash
+rclone copy /opt/ahhh-ibiza/backups remote:ahhh-backups --include "*.gz"
+```
 
 ## 9. Notas importantes
 
@@ -203,9 +317,15 @@ Programa las copias con `cron` y sácalas del servidor (scp/rclone/S3).
 - **IP real del cliente**: nginx envía `X-Forwarded-For` (ya configurado en
   `deploy/nginx/ahhh.conf`). Sin eso, todo el tráfico parecería venir de la
   misma IP y el rate limiting compartiría el contador.
-- **HTTPS**: con `AHHH_DEBUG=false` Django activa cookies seguras, HSTS y
-  redirección a HTTPS. Si pruebas sin dominio/certificado, usa
-  `AHHH_SECURE_SSL_REDIRECT=false` mientras tanto.
+- **HTTPS**: con `AHHH_DEBUG=false` Django activa cookies seguras y HSTS, y
+  nginx ya redirige el puerto 80 al 443 (`deploy/nginx/ahhh.conf`). Hasta que
+  el certificado real esté activo, el sitio funciona con el temporal autofirmado
+  pero el navegador mostrará una advertencia de seguridad (es esperable).
+  No uses `AHHH_SECURE_SSL_REDIRECT=false` en producción: rompería la
+  redirección HTTP→HTTPS a nivel de Django.
+- **Renovación del certificado**: la gestiona el timer
+  `ahhh-certbot-renew` (diario, solo renueva cerca de la caducidad). Revisa
+  `sudo systemctl status ahhh-certbot-renew.timer` tras desplegar.
 - **Subida de archivos**: `client_max_body_size 40m` en nginx permite subir
   imágenes/videos dentro de la cuota de 35 MB por perfil.
 - **Logs**:

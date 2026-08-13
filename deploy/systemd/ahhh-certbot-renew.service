@@ -1,0 +1,10 @@
+[Unit]
+Description=Renueva el certificado SSL de Ahhh! Ibiza (Let's Encrypt)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/ahhh-ibiza
+ExecStart=/bin/sh /opt/ahhh-ibiza/deploy/ssl_renew.sh
