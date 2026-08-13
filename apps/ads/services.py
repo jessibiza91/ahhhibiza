@@ -50,7 +50,9 @@ def charge_daily_tangas(for_date=None, dry_run=False):
 
     Un anuncio se cobra una sola vez por fecha (last_tangas_charged_at). Si el
     saldo del propietario no alcanza para el dia, el anuncio se degrada al plan
-    basico en lugar de dejar saldo negativo.
+    basico en lugar de dejar saldo negativo. Los anuncios exentos de cobro de
+    Tangas (tangas_charge_exempt=True) se ignoran aunque tengan plan de pago:
+    no se cobran ni se degradan y no cuentan en el resumen.
 
     Devuelve un resumen con el recuento de cargados/degradados y el detalle de
     cada anuncio (id, titulo, accion e importe) para informar.
@@ -66,6 +68,7 @@ def charge_daily_tangas(for_date=None, dry_run=False):
             owner__trashed_at__isnull=True,
             promotion_product__isnull=False,
             promotion_product__price_tangas__gt=0,
+            tangas_charge_exempt=False,
         )
         .filter(
             Q(last_tangas_charged_at__isnull=True)

@@ -12,7 +12,7 @@ from django.utils import timezone
 from PIL import Image
 
 from apps.accounts.models import CustomUser, FavoriteAd, ProfileMedia, SiteConfiguration
-from apps.ads.forms import AdForm
+from apps.ads.forms import AdForm, ControlAdForm
 from apps.ads.models import Ad, AdImage, PromotionProduct, ServiceTag
 from apps.ads.services import charge_daily_tangas
 from apps.payments.models import Transaction
@@ -485,6 +485,12 @@ class DailyTangasChargeTestCase(TestCase):
         cls.trashed_professional.trashed_at = timezone.now()
         cls.trashed_professional.save(update_fields=['trashed_at'])
 
+        cls.superadmin = CustomUser.objects.create_superuser(
+            username='charger_superadmin',
+            password='test-password',
+            email='charger_superadmin@example.com',
+        )
+
         cls.basic = PromotionProduct.objects.get(name='Basico')
         cls.featured = PromotionProduct.objects.get(name='Destacado')
 
@@ -673,4 +679,107 @@ class DailyTangasChargeTestCase(TestCase):
         self.professional.refresh_from_db()
         self.assertEqual(ad.last_tangas_charged_at, date(2026, 1, 2))
         self.assertEqual(self.professional.tangas_balance, Decimal('15.00'))
+
+    def test_daily_charge_skips_exempt_ads(self):
+        self._set_balance('5.00')
+        ad = self._ad(plan=self.featured)
+        ad.tangas_charge_exempt = True
+        ad.tangas_exempt_reason = 'Cortesia de lanzamiento'
+        ad.save()
+
+        result = charge_daily_tangas()
+
+        ad.refresh_from_db()
+        self.professional.refresh_from_db()
+        self.assertEqual(result['charged'], 0)
+        self.assertEqual(result['downgraded'], 0)
+        self.assertEqual(self.professional.tangas_balance, Decimal('5.00'))
+        self.assertEqual(ad.promotion_product, self.featured)
+        self.assertEqual(ad.status, Ad.Status.ACTIVE)
+        self.assertIsNone(ad.last_tangas_charged_at)
+
+    def test_form_exempt_ad_paid_plan_without_balance_is_valid_and_does_not_charge(self):
+        self._set_balance('0.00')
+        ad = self._ad(plan=self.basic)
+        ad.tangas_charge_exempt = True
+        ad.tangas_exempt_reason = 'Cortesia de lanzamiento'
+        ad.save()
+
+        form = AdForm(self._form_data(self.featured), instance=ad, owner=self.professional)
+        self.assertTrue(form.is_valid(), form.errors)
+
+        form.save()
+
+        ad.refresh_from_db()
+        self.professional.refresh_from_db()
+        self.assertEqual(ad.promotion_product, self.featured)
+        self.assertEqual(ad.price_tangas, 10)
+        self.assertIsNone(ad.last_tangas_charged_at)
+        self.assertEqual(self.professional.tangas_balance, Decimal('0.00'))
+
+    def test_professional_form_hides_exemption_fields(self):
+        form = AdForm(self._form_data(self.basic), owner=self.professional)
+
+        self.assertNotIn('tangas_charge_exempt', form.fields)
+        self.assertNotIn('tangas_exempt_reason', form.fields)
+
+    def test_control_form_exposes_and_persists_exemption(self):
+        ad = self._ad(plan=self.featured)
+        form = ControlAdForm({
+            'title': 'Anuncio de consumo',
+            'public_description': 'Descripcion de prueba.',
+            'hot_description': '',
+            'services': [],
+            'promotion_product': str(self.featured.pk),
+            'price_tangas': '10',
+            'status': Ad.Status.ACTIVE,
+            'tangas_charge_exempt': 'on',
+            'tangas_exempt_reason': 'Cortesia de Patricia',
+        }, instance=ad)
+
+        self.assertIn('tangas_charge_exempt', form.fields)
+        self.assertIn('tangas_exempt_reason', form.fields)
+        self.assertTrue(form.is_valid(), form.errors)
+
+        form.save()
+
+        ad.refresh_from_db()
+        self.assertTrue(ad.tangas_charge_exempt)
+        self.assertEqual(ad.tangas_exempt_reason, 'Cortesia de Patricia')
+
+    def test_control_view_persists_exemption(self):
+        ad = self._ad(plan=self.featured)
+        self.client.force_login(self.superadmin)
+
+        response = self.client.post(
+            reverse('control_ad_detail', args=[ad.pk]),
+            {
+                'title': ad.title,
+                'public_description': 'Descripcion de prueba.',
+                'hot_description': '',
+                'services': [],
+                'promotion_product': str(self.featured.pk),
+                'price_tangas': '10',
+                'status': Ad.Status.ACTIVE,
+                'tangas_charge_exempt': 'on',
+                'tangas_exempt_reason': 'Motivo de prueba',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        ad.refresh_from_db()
+        self.assertTrue(ad.tangas_charge_exempt)
+        self.assertEqual(ad.tangas_exempt_reason, 'Motivo de prueba')
+
+    def test_professional_cannot_access_staff_control_views(self):
+        self.client.force_login(self.professional)
+
+        response = self.client.get(reverse('control_ads'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/admin/login/', response.url)
+
+        ad = self._ad(plan=self.featured)
+        detail_response = self.client.get(reverse('control_ad_detail', args=[ad.pk]))
+        self.assertEqual(detail_response.status_code, 302)
+        self.assertIn('/admin/login/', detail_response.url)
 

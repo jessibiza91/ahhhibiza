@@ -86,6 +86,12 @@ class AdForm(forms.ModelForm):
         self._original_promotion_product_id = self.instance.promotion_product_id
         self.fields['promotion_product'].queryset = PromotionProduct.objects.filter(is_active=True)
 
+    def _is_exempt(self):
+        return bool(
+            self.instance.pk
+            and self.instance.tangas_charge_exempt
+        )
+
     def clean(self):
         cleaned_data = super().clean()
         product = cleaned_data.get('promotion_product')
@@ -96,6 +102,7 @@ class AdForm(forms.ModelForm):
             product is not None
             and product.price_tangas > 0
             and product.id != self._original_promotion_product_id
+            and not self._is_exempt()
         ):
             owner = self._ad_owner or self.instance.owner
             if owner and owner.tangas_balance < product.price_tangas:
@@ -116,11 +123,13 @@ class AdForm(forms.ModelForm):
 
         # Primer dia de un plan de pago: se descuenta al elegirlo (no al
         # renovar un plan ya activo). Marca last_tangas_charged_at para que el
-        # cron diario no vuelva a cobrar el mismo dia.
+        # cron diario no vuelva a cobrar el mismo dia. Los anuncios exentos de
+        # cobro no pagan el primer dia ni se exige saldo.
         first_day_charge = (
             product is not None
             and product.price_tangas > 0
             and product.id != self._original_promotion_product_id
+            and not self._is_exempt()
         )
 
         if commit:
@@ -162,7 +171,7 @@ class ControlAdForm(forms.ModelForm):
 
     class Meta:
         model = Ad
-        fields = ['title', 'public_description', 'hot_description', 'services', 'promotion_product', 'price_tangas', 'status']
+        fields = ['title', 'public_description', 'hot_description', 'services', 'promotion_product', 'price_tangas', 'status', 'tangas_charge_exempt', 'tangas_exempt_reason']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border rounded-xl focus:ring-fuchsia-500'}),
             'public_description': forms.Textarea(attrs={'class': 'w-full px-4 py-3 border rounded-xl focus:ring-fuchsia-500', 'rows': 5}),
@@ -170,6 +179,8 @@ class ControlAdForm(forms.ModelForm):
             'promotion_product': forms.Select(attrs={'class': 'w-full px-4 py-3 border rounded-xl focus:ring-fuchsia-500 bg-white'}),
             'price_tangas': forms.NumberInput(attrs={'class': 'w-full px-4 py-3 border rounded-xl focus:ring-fuchsia-500', 'min': '0'}),
             'status': forms.Select(attrs={'class': 'w-full px-4 py-3 border rounded-xl focus:ring-fuchsia-500 bg-white'}),
+            'tangas_charge_exempt': forms.CheckboxInput(attrs={'class': 'h-5 w-5 rounded text-fuchsia-600'}),
+            'tangas_exempt_reason': forms.TextInput(attrs={'class': 'w-full px-4 py-3 border rounded-xl focus:ring-fuchsia-500', 'placeholder': 'P.ej. cortesia para lanzamiento'}),
         }
 
 

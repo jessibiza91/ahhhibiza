@@ -40,6 +40,7 @@ Routemap de consolidacion: `docs/consolidation_route_map_2026-07-05.md`.
 - [x] Recuperacion de contrasena por email (flujo completo de Django, SMTP configurable por `.env`, rate-limited) con 6 tests.
 - [x] Cambio de contrasena desde sesion iniciada (Django PasswordChangeView, rate-limited) con 6 tests.
 - [x] `init_admin` asigna correo al superadmin desde `AHHH_ADMIN_EMAIL` (idempotente, sin tocar la contrasena) con 5 tests.
+- [x] Exencion de cobro de Tangas por anuncio (solo superadmin): los anuncios exentos no pagan Tangas aunque tengan plan de pago (ni cobro diario ni primer dia) y no se les exige saldo; motivo opcional visible en el panel de control.
 
 ## Ahora - Fase 1: Estabilizacion Tecnica
 

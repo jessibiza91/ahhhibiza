@@ -118,6 +118,11 @@
                         <span class="text-xs text-slate-500">{{ ad.status }}</span>
                     </div>
                     <p class="text-xs text-slate-400 mt-1">{{ ad.owner.username }}</p>
+                    {% if ad.tangas_charge_exempt %}
+                    <span class="mt-2 inline-flex items-center gap-1 rounded-full bg-fuchsia-100 px-2 py-0.5 text-[11px] font-bold text-fuchsia-800" title="{{ ad.tangas_exempt_reason|default:'Motivo no indicado' }}">
+                        <i class="fas fa-coins"></i> Exento de tangas{% if ad.tangas_exempt_reason %} · {{ ad.tangas_exempt_reason }}{% endif %}
+                    </span>
+                    {% endif %}
                 </a>
                 {% endfor %}
             </div>

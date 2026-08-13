@@ -64,6 +64,17 @@ class Ad(models.Model):
         verbose_name=_('Último cargo de Tangas'),
         help_text=_('Fecha del ultimo descuento diario del plan (para no cobrar dos veces el mismo dia).'),
     )
+    tangas_charge_exempt = models.BooleanField(
+        default=False,
+        verbose_name=_('Exento de cobro de Tangas'),
+        help_text=_('Solo superadmin: el anuncio no paga Tangas aunque tenga plan de pago.'),
+    )
+    tangas_exempt_reason = models.CharField(
+        blank=True,
+        max_length=255,
+        verbose_name=_('Motivo de la exención'),
+        help_text=_('Motivo opcional de la exencion de cobro de Tangas.'),
+    )
     trashed_at = models.DateTimeField(null=True, blank=True, db_index=True)
     trashed_by = models.ForeignKey(
         CustomUser,
