@@ -1,11 +1,15 @@
 import io
+import os
 import re
 import tempfile
+from unittest.mock import patch
 
 from django.core import mail
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from PIL import Image
@@ -320,5 +324,66 @@ class PasswordChangeRateLimitTestCase(TestCase):
             self.assertEqual(response.status_code, 200)
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 403)
+
+
+class InitAdminCommandTestCase(TestCase):
+    def test_creates_superuser_with_email(self):
+        with patch.dict(os.environ, {
+            'AHHH_ADMIN_USERNAME': 'Patricia',
+            'AHHH_ADMIN_PASSWORD': 'clave-segura-123',
+            'AHHH_ADMIN_EMAIL': 'patricia@example.com',
+        }, clear=True):
+            call_command('init_admin')
+        user = CustomUser.objects.get(username='Patricia')
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.is_staff)
+        self.assertEqual(user.email, 'patricia@example.com')
+        self.assertTrue(user.check_password('clave-segura-123'))
+
+    def test_creates_superuser_without_email(self):
+        with patch.dict(os.environ, {
+            'AHHH_ADMIN_USERNAME': 'Patricia',
+            'AHHH_ADMIN_PASSWORD': 'clave-segura-123',
+        }, clear=True):
+            call_command('init_admin')
+        user = CustomUser.objects.get(username='Patricia')
+        self.assertEqual(user.email, '')
+
+    def test_updates_email_of_existing_user_without_touching_password(self):
+        CustomUser.objects.create_superuser(
+            username='Patricia',
+            email='',
+            password='clave-antigua-123',
+        )
+        with patch.dict(os.environ, {
+            'AHHH_ADMIN_USERNAME': 'Patricia',
+            'AHHH_ADMIN_PASSWORD': 'otra-clave-999',
+            'AHHH_ADMIN_EMAIL': 'patricia@example.com',
+        }, clear=True):
+            call_command('init_admin')
+        user = CustomUser.objects.get(username='Patricia')
+        self.assertEqual(user.email, 'patricia@example.com')
+        self.assertTrue(user.check_password('clave-antigua-123'))
+
+    def test_keeps_previous_email_when_variable_not_set(self):
+        CustomUser.objects.create_superuser(
+            username='Patricia',
+            email='antigua@example.com',
+            password='clave-segura-123',
+        )
+        with patch.dict(os.environ, {
+            'AHHH_ADMIN_USERNAME': 'Patricia',
+            'AHHH_ADMIN_PASSWORD': 'clave-segura-123',
+        }, clear=True):
+            call_command('init_admin')
+        user = CustomUser.objects.get(username='Patricia')
+        self.assertEqual(user.email, 'antigua@example.com')
+
+    def test_requires_password(self):
+        with patch.dict(os.environ, {
+            'AHHH_ADMIN_USERNAME': 'Patricia',
+        }, clear=True):
+            with self.assertRaises(CommandError):
+                call_command('init_admin')
 
 

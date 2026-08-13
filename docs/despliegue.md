@@ -88,6 +88,7 @@ AHHH_POSTGRES_USER=ahhh_user
 AHHH_POSTGRES_PASSWORD=<contraseña segura de la base de datos>
 AHHH_ADMIN_USERNAME=Patricia
 AHHH_ADMIN_PASSWORD=<contraseña del superadmin>
+AHHH_ADMIN_EMAIL=patricia@tu-dominio.com
 AHHH_AUTH_RATE=5/h
 AHHH_EMAIL_HOST=<servidor SMTP del proveedor>
 AHHH_EMAIL_HOST_USER=<usuario del SMTP>
@@ -113,6 +114,11 @@ Notas:
   (`AHHH_EMAIL_HOST` y credenciales). Sin ellas, el proyecto usa el backend de
   consola: los correos se imprimen en el log del contenedor `app` y no se
   envían. Si aún no tienes SMTP configurado, el resto del sitio funciona igual.
+- **Superadmin**: `init_admin` crea el superusuario con `AHHH_ADMIN_USERNAME` /
+  `AHHH_ADMIN_PASSWORD` del `.env`. Con `AHHH_ADMIN_EMAIL` definido, además le
+  asigna ese correo (idempotente, sin tocar la contraseña) para que la
+  recuperación por email le funcione. Sin correo, la contraseña se recupera por
+  el servidor: `sudo docker compose exec app python manage.py changepassword Patricia`.
 - El `.env` no debe versionarse ni compartirse.
 
 ### 4.3 Preparar el certificado (obligatorio antes del primer arranque)

@@ -108,6 +108,7 @@ Orden recomendado para un dev nuevo o tras clonar: `SETUP.bat` → `SMART_MIGRAT
 | `AHHH_DB_PORT`              | Puerto de PostgreSQL                      | `5432`             |
 | `AHHH_ADMIN_USERNAME`       | Usuario superadmin (para `init_admin`)    | `Patricia`         |
 | `AHHH_ADMIN_PASSWORD`       | Password del superadmin                   | (obligatorio)      |
+| `AHHH_ADMIN_EMAIL`          | Correo del superadmin (init_admin se lo asigna, idempotente) | vacio |
 | `AHHH_PAYMENT_GATEWAY`      | Pasarela de pago activa (`dummy` en desarrollo) | `dummy`      |
 | `AHHH_PAYMENT_MODE`         | Modo de la pasarela: `test` o `live`      | `test`             |
 | `AHHH_PUBLIC_BASE_URL`      | Origen publico (sin barra final); base de la URL del webhook de pagos | vacio |
