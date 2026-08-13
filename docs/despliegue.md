@@ -89,6 +89,10 @@ AHHH_POSTGRES_PASSWORD=<contraseña segura de la base de datos>
 AHHH_ADMIN_USERNAME=Patricia
 AHHH_ADMIN_PASSWORD=<contraseña del superadmin>
 AHHH_AUTH_RATE=5/h
+AHHH_EMAIL_HOST=<servidor SMTP del proveedor>
+AHHH_EMAIL_HOST_USER=<usuario del SMTP>
+AHHH_EMAIL_HOST_PASSWORD=<contraseña del SMTP>
+AHHH_DEFAULT_FROM_EMAIL=Ahhh! Ibiza <noreply@tu-dominio.com>
 ```
 
 Para generar una clave segura:
@@ -105,6 +109,10 @@ Notas:
   (`redis://redis:6379/1`).
 - `AHHH_DOMAIN` se usa para emitir y renovar el certificado SSL; debe ser el
   dominio sin `www` ni `https://` y coincidir con el de `deploy/nginx/ahhh.conf`.
+- **Correo (SMTP)**: el flujo "¿Olvidaste tu contraseña?" necesita un SMTP real
+  (`AHHH_EMAIL_HOST` y credenciales). Sin ellas, el proyecto usa el backend de
+  consola: los correos se imprimen en el log del contenedor `app` y no se
+  envían. Si aún no tienes SMTP configurado, el resto del sitio funciona igual.
 - El `.env` no debe versionarse ni compartirse.
 
 ### 4.3 Preparar el certificado (obligatorio antes del primer arranque)

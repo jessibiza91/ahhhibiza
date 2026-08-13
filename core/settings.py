@@ -133,6 +133,20 @@ if AHHH_PAYMENT_MODE not in {'test', 'live'}:
 # puede dejarse vacio; en produccion debe apuntar al dominio final con HTTPS.
 AHHH_PUBLIC_BASE_URL = os.getenv('AHHH_PUBLIC_BASE_URL', '').rstrip('/')
 
+# Correo (SMTP). Sin AHHH_EMAIL_HOST se usa el backend de consola: los correos
+# (p. ej. recuperacion de contrasena) se imprimen en el servidor/terminal, util
+# en desarrollo. En produccion hay que configurar un proveedor SMTP real.
+EMAIL_HOST = os.getenv('AHHH_EMAIL_HOST', '').strip()
+if EMAIL_HOST:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_PORT = int(os.getenv('AHHH_EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.getenv('AHHH_EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('AHHH_EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = env_bool('AHHH_EMAIL_USE_TLS', True)
+DEFAULT_FROM_EMAIL = os.getenv('AHHH_DEFAULT_FROM_EMAIL', 'Ahhh! Ibiza <noreply@ahhh-ibiza.com>')
+
 # Cache: locmem por defecto (dev). En produccion usar Redis para que el rate
 # limiting sea compartido entre todos los workers de gunicorn.
 if os.getenv('AHHH_REDIS_URL'):

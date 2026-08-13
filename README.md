@@ -111,6 +111,12 @@ Orden recomendado para un dev nuevo o tras clonar: `SETUP.bat` → `SMART_MIGRAT
 | `AHHH_PAYMENT_GATEWAY`      | Pasarela de pago activa (`dummy` en desarrollo) | `dummy`      |
 | `AHHH_PAYMENT_MODE`         | Modo de la pasarela: `test` o `live`      | `test`             |
 | `AHHH_PUBLIC_BASE_URL`      | Origen publico (sin barra final); base de la URL del webhook de pagos | vacio |
+| `AHHH_EMAIL_HOST`           | Servidor SMTP de salida; vacio usa el backend de consola | vacio |
+| `AHHH_EMAIL_PORT`           | Puerto del SMTP                              | `587`             |
+| `AHHH_EMAIL_HOST_USER`      | Usuario del SMTP                             | vacio             |
+| `AHHH_EMAIL_HOST_PASSWORD`  | Contraseña del SMTP                          | vacio             |
+| `AHHH_EMAIL_USE_TLS`        | TLS para el SMTP (`true`/`false`)            | `true`            |
+| `AHHH_DEFAULT_FROM_EMAIL`   | Remitente de los correos                     | `Ahhh! Ibiza <noreply@ahhh-ibiza.com>` |
 
 `.env` esta en `.gitignore`: nunca se sube al repositorio. Solo se versiona `.env.example`. Las claves privadas de la pasarela real van solo en el `.env` (ver `docs/pagos_pasarela.md`).
 

@@ -37,6 +37,8 @@ Routemap de consolidacion: `docs/consolidation_route_map_2026-07-05.md`.
 - [x] Variable de entorno `AHHH_PAYMENT_MODE` (test/live) validada al arrancar.
 - [x] Documento de pasarela: `docs/pagos_pasarela.md`.
 - [x] Suite ampliada a 63 tests (flujo de recarga, idempotencia, control de paquetes).
+- [x] Recuperacion de contrasena por email (flujo completo de Django, SMTP configurable por `.env`, rate-limited) con 6 tests.
+- [x] Cambio de contrasena desde sesion iniciada (Django PasswordChangeView, rate-limited) con 6 tests.
 
 ## Ahora - Fase 1: Estabilizacion Tecnica
 

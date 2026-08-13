@@ -3,12 +3,13 @@ import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import login
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, PasswordResetView, PasswordChangeView
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q, Sum
+from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
@@ -31,6 +32,24 @@ def register_selector(request):
 
 class RateLimitedLoginView(LoginView):
     template_name = 'registration/login.html'
+
+    @method_decorator(ratelimit(key='ip', rate=settings.AHHH_AUTH_RATE, method='POST', block=True))
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+class RateLimitedPasswordResetView(PasswordResetView):
+    template_name = 'registration/password_reset_form.html'
+    email_template_name = 'registration/password_reset_email.txt'
+    subject_template_name = 'registration/password_reset_subject.txt'
+    success_url = reverse_lazy('password_reset_done')
+
+    @method_decorator(ratelimit(key='ip', rate=settings.AHHH_AUTH_RATE, method='POST', block=True))
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+class RateLimitedPasswordChangeView(PasswordChangeView):
+    template_name = 'registration/password_change_form.html'
+    success_url = reverse_lazy('password_change_done')
 
     @method_decorator(ratelimit(key='ip', rate=settings.AHHH_AUTH_RATE, method='POST', block=True))
     def post(self, request, *args, **kwargs):

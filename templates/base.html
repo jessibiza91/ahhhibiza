@@ -107,6 +107,10 @@
                 </a>
                 {% endif %}
 
+                <a href="{% url 'password_change' %}" class="nav-btn-luxury" title="Cambiar contraseña">
+                    <i class="fas fa-key"></i> CONTRASEÑA
+                </a>
+
                 <!-- Logout POST Form -->
                 <form id="logout-form" action="{% url 'logout' %}" method="post" class="inline">
                     {% csrf_token %}
