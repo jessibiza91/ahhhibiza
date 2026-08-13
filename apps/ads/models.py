@@ -58,6 +58,12 @@ class Ad(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    last_tangas_charged_at = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name=_('Último cargo de Tangas'),
+        help_text=_('Fecha del ultimo descuento diario del plan (para no cobrar dos veces el mismo dia).'),
+    )
     trashed_at = models.DateTimeField(null=True, blank=True, db_index=True)
     trashed_by = models.ForeignKey(
         CustomUser,

@@ -47,6 +47,7 @@
 
     <section class="bg-white border border-slate-100 rounded-lg p-5 mb-8">
         <h2 class="text-xl font-bold text-slate-900">Promociones disponibles</h2>
+        <p class="text-sm text-slate-500 mt-1">El precio es por dia y se descuenta de tu saldo mientras el anuncio este promocionado.</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
             {% for product in products %}
             <article class="rounded-lg border border-slate-200 p-4">
@@ -55,9 +56,13 @@
                         <h3 class="font-bold text-slate-900">{{ product.name }}</h3>
                         <p class="text-sm text-slate-500 mt-1">{{ product.description|default:"Promocion para anuncios." }}</p>
                     </div>
-                    <strong class="text-fuchsia-700 whitespace-nowrap">{{ product.price_tangas }} T</strong>
+                    {% if product.price_tangas > 0 %}
+                    <strong class="text-fuchsia-700 whitespace-nowrap">{{ product.price_tangas }} T/dia</strong>
+                    {% else %}
+                    <strong class="text-slate-400 whitespace-nowrap">Gratis</strong>
+                    {% endif %}
                 </div>
-                <p class="text-xs text-slate-400 mt-3">{{ product.duration_days }} dias · {{ product.get_visibility_display }}</p>
+                <p class="text-xs text-slate-400 mt-3">Se descuenta cada dia mientras este activo · {{ product.get_visibility_display }}</p>
             </article>
             {% empty %}
             <p class="text-sm text-slate-400">No hay promociones activas.</p>

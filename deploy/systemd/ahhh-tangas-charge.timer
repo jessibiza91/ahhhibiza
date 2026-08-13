@@ -1,0 +1,15 @@
+[Unit]
+Description=Ejecuta el cobro diario de Tangas de Ahhh! Ibiza
+Documentation=man:systemd.timer(5)
+
+[Timer]
+# Hora por defecto (02:45). El script deploy/install_charge_timer.sh genera este
+# archivo en /etc/systemd/system/ usando la variable AHHH_TANGAS_CHARGE_HOUR del
+# .env cuando se instala. RandomizedDelaySec evita picos; Persistent ejecuta el
+# cobro pendiente si el servidor estaba apagado.
+OnCalendar=*-*-* 02:45:00
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

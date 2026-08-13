@@ -48,9 +48,11 @@ deploy/certbot/www/        Webroot para el reto ACME de Let's Encrypt
 deploy/nginx/ahhh.conf     Configuracion de nginx (HTTPS, static, media, reto ACME)
 deploy/backup.sh           Copia de seguridad diaria (DB + media) + rotacion
 deploy/restore.sh          Restauracion de una copia (DB o media)
+deploy/install_charge_timer.sh  Instala el timer del cobro diario de Tangas
 deploy/systemd/ahhh.service  Unidad systemd que arranca/para el stack
 deploy/systemd/ahhh-certbot-renew.service/.timer  Renovacion automatica del SSL
 deploy/systemd/ahhh-backup.service/.timer         Copias de seguridad diarias (03:15)
+deploy/systemd/ahhh-tangas-charge.service/.timer  Cobro diario de Tangas de los planes
 docker-compose.yml         Orquesta db, redis, app y nginx
 requirements/prod.txt      Dependencias de produccion (gunicorn, redis)
 ```
@@ -309,7 +311,52 @@ a otro sitio, p. ej. con cron diario:
 rclone copy /opt/ahhh-ibiza/backups remote:ahhh-backups --include "*.gz"
 ```
 
-## 9. Notas importantes
+## 9. Consumo diario de Tangas (planes de anuncios)
+
+Cada anuncio con un plan de pago (`Destacado`, `Siempre arriba`) descuenta a su
+propietario el `price_tangas` del plan **por día**. Si el saldo no alcanza, el
+anuncio se degrada al plan Básico (sigue activo, sin promoción). El primer día
+se cobra al elegir el plan en el formulario del anuncio; los siguientes los
+cobra el timer diario.
+
+### 9.1 Instalacion (produccion)
+
+Requiere `AHHH_TANGAS_CHARGE_HOUR` en `.env` (formato `HH:MM`, por defecto
+`02:45`). El instalador genera el timer de systemd con esa hora:
+
+```bash
+cd /opt/ahhh-ibiza
+sudo ./deploy/install_charge_timer.sh
+sudo systemctl list-timers | grep ahhh   # comprobar la proxima ejecucion
+```
+
+El timer corre a diario con retardo aleatorio de 30 min (`Persistent=true`:
+si el servidor estaba apagado, se ejecuta al arrancar). No choca con el backup
+(03:15) ni con la renovacion del certificado (04:30).
+
+### 9.2 Ejecutar a mano y probar
+
+```bash
+# Previsualizar lo que haria hoy (no cambia nada)
+sudo docker compose exec -T app python manage.py consume_plan_tangas --dry-run
+
+# Cobrar ya
+sudo docker compose exec -T app python manage.py consume_plan_tangas
+
+# Simular para una fecha concreta
+sudo docker compose exec -T app python manage.py consume_plan_tangas --dry-run --date 2026-08-20
+```
+
+El cobro es idempotente por anuncio y dia (`last_tangas_charged_at`): da igual
+cuantas veces se ejecute el mismo dia, cada anuncio paga una sola vez.
+
+### 9.3 Notas
+
+- Cambiar de plan de pago a otro cobra el día completo del nuevo plan al guardar.
+- Los anuncios ya promocionados antes de instalar el timer se cobran en la
+  primera ejecución (sin retroactivo).
+
+## 10. Notas importantes
 
 - **Rate limiting**: para que `django-ratelimit` (5 intentos/h por IP en
   login/registros) funcione con varios workers, la cache usa Redis
@@ -335,7 +382,7 @@ sudo docker compose logs -f app
 sudo docker compose logs -f nginx
 ```
 
-## 10. Referencia: sin Docker (alternativa manual)
+## 11. Referencia: sin Docker (alternativa manual)
 
 La versión anterior de esta guía desplegaba Django con gunicorn instalado en
 el host, nginx del sistema y solo PostgreSQL en Docker. Es viable pero tiene

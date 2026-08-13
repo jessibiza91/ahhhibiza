@@ -171,9 +171,11 @@
                     <span class="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 shadow-sm">{{ ad.get_status_display }}</span>
                     {% endif %}
 
+                    {% if ad.price_tangas > 0 %}
                     <span class="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold bg-white/95 text-fuchsia-600 shadow-sm">
-                        {{ ad.price_tangas }} T
+                        {{ ad.price_tangas }} T/dia
                     </span>
+                    {% endif %}
                 </div>
 
                 <div class="p-4">
@@ -183,7 +185,7 @@
                         {{ ad.owner.profile.get_zone_display|default:"-" }}
                     </p>
                     <p class="text-xs text-fuchsia-600 font-bold mt-2">
-                        {{ ad.promotion_product.name|default:"Basico" }}
+                        {{ ad.promotion_product.name|default:"Basico" }}{% if ad.price_tangas > 0 %} · se descuenta a diario{% endif %}
                     </p>
                     <p class="text-sm text-gray-500 mt-3 line-clamp-2 min-h-[2.5rem]">
                         {{ ad.public_description|default:"Sin descripcion publica."|truncatechars:110 }}
