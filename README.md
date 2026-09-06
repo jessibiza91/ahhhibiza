@@ -121,6 +121,35 @@ Pendiente de definir: la pasarela de pago para la compra de Tangas.
 
 Mas detalle en `docs/roadmap.md` (vision y fases maestras) y `docs/state_of_play.md` (estado actual del proyecto).
 
+## Copias de seguridad de la base de datos
+
+El proyecto incluye backup automatico de PostgreSQL, con opcion de copia off-site
+en **Backblaze B2** (u otro destino compatible con rclone):
+
+- `deploy/backup_db.sh` — script de backup: hace un `pg_dump` del contenedor
+  `ahhh_postgres`, lo comprime en gzip, lo guarda en `backups/`, rota los dumps
+  antiguos y (si esta configurado) lo sube a B2.
+- `deploy/cron/ahhh_backup` — cronjob diario a las **03:00**.
+
+Requiere docker en el PATH y el contenedor `ahhh_postgres` corriendo. Para la
+copia off-site se necesita `rclone` instalado y un remote configurado (`rclone config`).
+
+Instalacion en el servidor:
+
+```bash
+chmod +x /opt/ahhh-ibiza/deploy/backup_db.sh
+sudo cp /opt/ahhh-ibiza/deploy/cron/ahhh_backup /etc/cron.d/ahhh_backup
+```
+
+Para activar la subida a Backblaze B2, anade al `.env`:
+
+```ini
+AHHH_B2_REMOTE=ahhh-b2:ahhh-ibiza-backups
+```
+
+Donde `ahhh-b2` es el remote de rclone hacia tu bucket y `ahhh-ibiza-backups` la
+carpeta de destino. Guia completa en `docs/despliegue.md`.
+
 ## Documentacion
 
 `docs/` es la fuente de verdad del estado del proyecto. Antes de tocar codigo, lee:

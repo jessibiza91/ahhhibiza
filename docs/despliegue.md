@@ -37,6 +37,8 @@ Dockerfile                 Imagen de la app (dependencias prod + entrypoint)
 deploy/entrypoint.sh       migrate + init_admin + collectstatic + gunicorn
 deploy/nginx/ahhh.conf     Configuracion de nginx (proxy, static, media)
 deploy/systemd/ahhh.service  Unidad systemd que arranca/para el stack
+deploy/backup_db.sh        Backup automatico de PostgreSQL (+ opcion B2/rclone)
+deploy/cron/ahhh_backup    Cron diario (03:00) que ejecuta backup_db.sh
 docker-compose.yml         Orquesta db, redis, app y nginx
 requirements/prod.txt      Dependencias de produccion (gunicorn, redis)
 ```
@@ -182,18 +184,63 @@ Para renovación automática, un timer de systemd que ejecute
 
 ## 8. Copias de seguridad
 
-Base de datos:
+### 8.1 Base de datos (automatico, con copia off-site)
+
+El proyecto incluye un script de backup que hace un `pg_dump` del contenedor
+`ahhh_postgres`, lo comprime en gzip y rota los dumps antiguos:
+
+- **Script:** `deploy/backup_db.sh`
+- **Cronjob:** `deploy/cron/ahhh_backup` (diario a las 03:00)
+
+Instalacion (una vez):
 
 ```bash
-cd /opt/ahhh-ibiza
-sudo docker compose exec -T db pg_dump -U ahhh_user ahhh_db > backups/ahhh_$(date +%F).sql
+chmod +x /opt/ahhh-ibiza/deploy/backup_db.sh
+sudo cp /opt/ahhh-ibiza/deploy/cron/ahhh_backup /etc/cron.d/ahhh_backup
+```
+
+Los dumps quedan en `backups/ahhh_db_AAAA-MM-DD_HH-MM-SS.sql.gz`. Se conservan
+los 14 mas recientes (`AHHH_BACKUP_KEEP` para cambiar). El log de cada ejecucion
+queda en `backups/backup.log`.
+
+### 8.2 Copia off-site en Backblaze B2 (recomendado)
+
+Para que los backups sobrevivan a un fallo del propio servidor, se puede subir
+cada dump a **Backblaze B2** (10 GB gratuitos). El script usa `rclone`.
+
+1. Instala y configura `rclone`:
+
+```bash
+sudo apt install -y rclone
+rclone config   # elige "backblaze B2", pon tu Account ID y Application Key
+```
+
+   El remote se llamara, por ejemplo, `ahhh-b2`. Crea el bucket si no existe:
+
+```bash
+rclone mkdir ahhh-b2:ahhh-ibiza-backups
+```
+
+2. Activa la subida en el backup. Anade al `.env`:
+
+```ini
+AHHH_B2_REMOTE=ahhh-b2:ahhh-ibiza-backups
+```
+
+   Con esto, cada ejecucion del cron sube tambien el dump a B2. El script hace
+   3 intentos de subida; si falla, aborta con error en el log y no borra el dump
+   local. Si no quieres copia remota, deja `AHHH_B2_REMOTE` sin definir.
+
+3. Prueba manual (opcional):
+
+```bash
+docker compose exec -T db pg_dump -U ahhh_user ahhh_db > /tmp/prova.sql
 ```
 
 Media (fotos y videos subidos): guarda el volumen `media_data`. Los archivos
 se pueden copiar montando el volumen en un contenedor temporal o con la ruta
 que exponga el volumen en el host (`docker volume inspect ahhh-ibiza_media_data`).
-
-Programa las copias con `cron` y sácalas del servidor (scp/rclone/S3).
+Programa las copias con `cron` y sacalas del servidor con el mismo `rclone`.
 
 ## 9. Notas importantes
 

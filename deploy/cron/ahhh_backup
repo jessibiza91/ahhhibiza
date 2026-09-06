@@ -1,0 +1,13 @@
+# Copia de seguridad diaria de la base PostgreSQL de Ahhh! Ibiza.
+#
+# Instalacion:
+#   sudo cp deploy/cron/ahhh_backup /etc/cron.d/ahhh_backup
+#
+# Requiere que el script sea ejecutable:
+#   chmod +x deploy/backup_db.sh
+#
+# Se ejecuta cada dia a las 03:00, antes de que se note el trafico.
+#
+# Formato cron.d: minuto hora dia mes dia_semana usuario comando
+#
+0 3 * * * root /opt/ahhh-ibiza/deploy/backup_db.sh
