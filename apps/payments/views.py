@@ -36,6 +36,17 @@ def recharge_start(request):
         return redirect('user_dispatch')
 
     try:
+        gateway = get_active_gateway()
+    except Exception:
+        logger.exception('No hay pasarela de pago configurada')
+        messages.error(request, 'La recarga de Tangas no está disponible.')
+        return redirect('professional_wallet')
+
+    if gateway.name == 'disabled':
+        messages.error(request, 'La recarga de Tangas no está disponible temporalmente.')
+        return redirect('professional_wallet')
+
+    try:
         package_id = int(request.POST.get('package_id', ''))
     except (TypeError, ValueError):
         package_id = None

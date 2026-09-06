@@ -2,11 +2,13 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
 from .base import BaseGateway
+from .disabled import DisabledGateway
 from .dummy import DummyGateway
 
 
 _GATEWAYS = {
     'dummy': DummyGateway,
+    'disabled': DisabledGateway,
 }
 
 
