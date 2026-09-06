@@ -59,6 +59,9 @@ Piezas clave:
   `parse_event`.
 - `gateways/dummy.py`: `DummyGateway`, simulacion para desarrollo. No cobra
   nada. Solo permitida con `AHHH_DEBUG=True` o en tests.
+- `gateways/disabled.py`: `DisabledGateway`, para produccion sin pasarela real.
+  Bloquea la recarga online (no crea ordenes) y muestra un mensaje claro; el
+  superadmin sigue pudiendo ajustar saldo manualmente desde el panel.
 - `gateways/registry.py`: catalogo de pasarelas disponibles (`_GATEWAYS`).
   Bloquea `dummy` en produccion y valida que la pasarela elegida exista.
 - `services.py`: toda la logica de negocio. Crea la orden, confirma el pago
@@ -89,13 +92,17 @@ Variables en `.env` (ver `.env.example`):
 
 | Variable               | Valores                 | Descripcion                                   |
 | ---------------------- | ----------------------- | --------------------------------------------- |
-| `AHHH_PAYMENT_GATEWAY` | `dummy`, o nueva        | Pasarela activa. `dummy` solo en desarrollo.  |
+| `AHHH_PAYMENT_GATEWAY` | `dummy`, `disabled`, o nueva | Pasarela activa. `dummy` solo en desarrollo; `disabled` en produccion sin pasarela real (bloquea la recarga). |
 | `AHHH_PAYMENT_MODE`    | `test`, `live`          | Modo de operacion. Validado al arrancar.      |
 | `AHHH_PUBLIC_BASE_URL` | URL, sin barra final    | Origen publico (ej. `https://www.ahhh-ibiza.com`). Se usa para construir la URL del webhook que configura la pasarela. |
 
 - `test` (sandbox): la pasarela opera sin cobrar, para probar.
 - `live`: cobros reales. Al cambiar el modo hay que asegurar que la pasarela
   real esta activa, porque `dummy` se bloquea en produccion.
+- `disabled`: no hay pasarela real integrada. Es la opcion para produccion
+  mientras tanto: el sitio funciona pero la recarga online muestra "no
+  disponible" y no crea ordenes. El panel de control sigue permitiendo al
+  superadmin ajustar saldo manualmente.
 - `AHHH_PUBLIC_BASE_URL`: en produccion debe apuntar al dominio final con
   HTTPS. En desarrollo local puede dejarse vacio.
 

@@ -109,8 +109,11 @@ Orden recomendado para un dev nuevo o tras clonar: `SETUP.bat` → `SMART_MIGRAT
 | `AHHH_ADMIN_USERNAME`       | Usuario superadmin (para `init_admin`)    | `Patricia`         |
 | `AHHH_ADMIN_PASSWORD`       | Password del superadmin                   | (obligatorio)      |
 | `AHHH_ADMIN_EMAIL`          | Correo del superadmin (init_admin se lo asigna, idempotente) | vacio |
-| `AHHH_PAYMENT_GATEWAY`      | Pasarela de pago activa (`dummy` en desarrollo) | `dummy`      |
+| `AHHH_PAYMENT_GATEWAY`      | Pasarela de pago activa (`dummy` desarrollo, `disabled` prod sin pasarela) | `dummy`      |
 | `AHHH_PAYMENT_MODE`         | Modo de la pasarela: `test` o `live`      | `test`             |
+| `AHHH_NGINX_CONF`           | Archivo de config nginx (`ahhh.conf` HTTPS o `ahhh.http.conf` solo HTTP) | `ahhh.conf` |
+| `AHHH_SESSION_COOKIE_SECURE`| Cookie session segura (solo HTTPS); `false` en despliegue HTTP temporal | `true` en prod |
+| `AHHH_CSRF_COOKIE_SECURE`   | Cookie CSRF segura (solo HTTPS); `false` en despliegue HTTP temporal  | `true` en prod |
 | `AHHH_PUBLIC_BASE_URL`      | Origen publico (sin barra final); base de la URL del webhook de pagos | vacio |
 | `AHHH_EMAIL_HOST`           | Servidor SMTP de salida; vacio usa el backend de consola | vacio |
 | `AHHH_EMAIL_PORT`           | Puerto del SMTP                              | `587`             |

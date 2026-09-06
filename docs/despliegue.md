@@ -46,6 +46,7 @@ deploy/install_https.sh    Certificado SSL: temporal + Let's Encrypt + renovacio
 deploy/ssl_renew.sh        Renovacion del certificado (lo ejecuta el timer)
 deploy/certbot/www/        Webroot para el reto ACME de Let's Encrypt
 deploy/nginx/ahhh.conf     Configuracion de nginx (HTTPS, static, media, reto ACME)
+deploy/nginx/ahhh.http.conf  Configuracion de nginx solo HTTP (IP sin certificado)
 deploy/backup.sh           Copia de seguridad diaria (DB + media) + rotacion
 deploy/restore.sh          Restauracion de una copia (DB o media)
 deploy/install_charge_timer.sh  Instala el timer del cobro diario de Tangas
@@ -92,6 +93,8 @@ AHHH_ADMIN_USERNAME=Patricia
 AHHH_ADMIN_PASSWORD=<contraseña del superadmin>
 AHHH_ADMIN_EMAIL=patricia@tu-dominio.com
 AHHH_AUTH_RATE=5/h
+# Pasarela sin pasarela real: 'disabled' bloquea la recarga con mensaje claro
+AHHH_PAYMENT_GATEWAY=disabled
 AHHH_EMAIL_HOST=<servidor SMTP del proveedor>
 AHHH_EMAIL_HOST_USER=<usuario del SMTP>
 AHHH_EMAIL_HOST_PASSWORD=<contraseña del SMTP>
@@ -121,7 +124,57 @@ Notas:
   asigna ese correo (idempotente, sin tocar la contraseña) para que la
   recuperación por email le funcione. Sin correo, la contraseña se recupera por
   el servidor: `sudo docker compose exec app python manage.py changepassword Patricia`.
+- **Pasarela de pagos**: hasta que se integre una pasarela real se usa
+  `AHHH_PAYMENT_GATEWAY=disabled`, que bloquea la recarga online con un mensaje
+  claro y deja el resto del sitio funcionando. Sin ese valor, con `AHHH_DEBUG=false`
+  Django usa la pasarela `dummy` por defecto y el arranque falla (payments.E001).
 - El `.env` no debe versionarse ni compartirse.
+
+### 4.2bis Alternativa: despliegue por IP sin dominio (fase temporal)
+
+Si aun no tienes un dominio apuntando al servidor, puedes desplegar accediendo
+directamente por la **IP publica** (por ejemplo `http://103.6.171.164`). En esa
+fase, adapta el `.env`:
+
+```ini
+AHHH_DEBUG=false
+AHHH_SECRET_KEY=<genera una clave larga y aleatoria>
+AHHH_ALLOWED_HOSTS=103.6.171.164            # la IP publica del servidor
+AHHH_CSRF_TRUSTED_ORIGINS=http://103.6.171.164
+AHHH_POSTGRES_DB=ahhh_db
+AHHH_POSTGRES_USER=ahhh_user
+AHHH_POSTGRES_PASSWORD=<contraseña segura de la base de datos>
+AHHH_ADMIN_USERNAME=Patricia
+AHHH_ADMIN_PASSWORD=<contraseña del superadmin>
+AHHH_AUTH_RATE=5/h
+# Pasarela sin pasarela real: 'disabled' bloquea la recarga con mensaje claro
+AHHH_PAYMENT_GATEWAY=disabled
+AHHH_PAYMENT_MODE=test
+
+# nginx solo HTTP (ahhh.http.conf): no exige certificado
+AHHH_NGINX_CONF=ahhh.http.conf
+
+# Cookies seguras desactivadas: obligatorio por HTTP o login/CSRF fallarian
+AHHH_SECURE_SSL_REDIRECT=false
+AHHH_SESSION_COOKIE_SECURE=false
+AHHH_CSRF_COOKIE_SECURE=false
+```
+
+Notas de esta modalidad:
+
+- **Sin `AHHH_DOMAIN`**: mientras no haya dominio no se ejecuta
+  `install_https.sh`; se omite el paso 4.3.
+- **`AHHH_NGINX_CONF=ahhh.http.conf`**: docker compose monta el config de nginx
+  que escucha solo en el puerto 80, sin certificado (el montado por defecto,
+  `ahhh.conf`, exige el certificado de Let's Encrypt y nginx no arranca sin el).
+- **Cookies seguras a `false`**: con `AHHH_DEBUG=false` Django marca por defecto
+  las cookies de sesion y CSRF como `Secure`, y los navegadores no las guardan
+  por HTTP: el login y los formularios (CSRF) fallarian. Al pasar a HTTPS (paso
+  7) borra estas tres variables o ponlas en `true`.
+- **Recarga de Tangas**: con `AHHH_PAYMENT_GATEWAY=disabled` el sitio funciona
+  completo pero la recarga online muestra "no disponible" hasta que se integre
+  una pasarela real (el superadmin puede seguir ajustando saldo manualmente).
+- Verifica con `curl http://<IP>/health/` (sin `-k`, ya no hay HTTPS).
 
 ### 4.3 Preparar el certificado (obligatorio antes del primer arranque)
 
@@ -431,7 +484,10 @@ cuantas veces se ejecute el mismo dia, cada anuncio paga una sola vez.
   el certificado real esté activo, el sitio funciona con el temporal autofirmado
   pero el navegador mostrará una advertencia de seguridad (es esperable).
   No uses `AHHH_SECURE_SSL_REDIRECT=false` en producción: rompería la
-  redirección HTTP→HTTPS a nivel de Django.
+  redirección HTTP→HTTPS a nivel de Django. La excepción es el despliegue
+  temporal por IP sin certificado (sección 4.2bis): allí se usa
+  `ahhh.http.conf` y se ponen `AHHH_SECURE_SSL_REDIRECT`, `AHHH_SESSION_COOKIE_SECURE`
+  y `AHHH_CSRF_COOKIE_SECURE` en `false` para que login y CSRF funcionen por HTTP.
 - **Renovación del certificado**: la gestiona el timer
   `ahhh-certbot-renew` (diario, solo renueva cerca de la caducidad). Revisa
   `sudo systemctl status ahhh-certbot-renew.timer` tras desplegar.

@@ -106,8 +106,10 @@ Los Tangas son saldo interno del profesional. No son un precio publico, no apare
 
 ### Compra online de Tangas (implementada, con pasarela simulada)
 
-El flujo de compra esta construido y probado, pero con la pasarela `dummy`:
-solo cobra de verdad cuando se conecte una pasarela real.
+El flujo de compra esta construido y probado, pero con la pasarela `dummy`
+(desarrollo) o `disabled` (produccion sin pasarela real, que bloquea la
+recarga online con un mensaje claro): solo cobra de verdad cuando se conecte
+una pasarela real.
 
 - Los profesionales eligen un paquete en su cartera y se crea una orden PENDING.
 - La pasarela (via contrato `BaseGateway`) devuelve una URL de pago.
@@ -115,8 +117,8 @@ solo cobra de verdad cuando se conecte una pasarela real.
   saldo de forma atomica e idempotente (con `select_for_update`).
 - Superadmin gestiona los paquetes (crear, editar, desactivar) desde el panel y
   desde Django Admin; ordenes y logs de webhook quedan registrados.
-- `AHHH_PAYMENT_GATEWAY` (dummy) y `AHHH_PAYMENT_MODE` (test/live) se configuran
-  por entorno. `dummy` esta bloqueada en produccion.
+- `AHHH_PAYMENT_GATEWAY` (dummy/disabled) y `AHHH_PAYMENT_MODE` (test/live) se
+  configuran por entorno. `dummy` esta bloqueada en produccion.
 
 Pendiente: elegir una pasarela adulto-friendly y conectar su webhook con firma
 en HTTPS. Detalle completo en `docs/pagos_pasarela.md`.

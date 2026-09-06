@@ -69,7 +69,8 @@ El ciclo de compra online de Tangas esta implementado con una pasarela simulada 
 - Compra online de Tangas: orden PENDING, checkout, webhook y acreditacion atomica e idempotente.
 - Control visual de paquetes de Tangas (crear, editar, desactivar) desde el panel.
 - Paquetes, ordenes y logs de webhook tambien registrados en Django Admin.
-- Pasarela aislada tras `BaseGateway` + registry; `dummy` bloqueada en produccion.
+- Pasarela aislada tras `BaseGateway` + registry; `dummy` bloqueada en produccion y
+  pasarela `disabled` para produccion sin pasarela real (bloquea la recarga online).
 - `AHHH_PAYMENT_MODE` (test/live) validado al arrancar.
 - Rutas cliente y profesional auditadas sin fugas a Django.
 - Navegacion compacta en telefono.
