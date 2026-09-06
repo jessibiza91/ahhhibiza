@@ -64,12 +64,9 @@ def ad_create(request):
         return redirect('user_dispatch')
 
     if request.method == 'POST':
-        form = AdForm(request.POST, request.FILES)
+        form = AdForm(request.POST, request.FILES, owner=request.user)
         if form.is_valid():
-            ad = form.save(commit=False)
-            ad.owner = request.user
-            ad.save()
-            form.save_m2m()
+            ad = form.save()
             
             # Handle Public Media (is_private=False)
             for f in form.cleaned_data['public_media']:
@@ -83,7 +80,7 @@ def ad_create(request):
                 return redirect('ad_detail', ad_id=ad.id)
             return redirect('professional_dashboard')
     else:
-        form = AdForm()
+        form = AdForm(owner=request.user)
     return render(request, 'ads/ad_form.html', {'form': form})
 
 @login_required
@@ -96,7 +93,7 @@ def ad_edit(request, pk):
         return HttpResponseForbidden()
 
     if request.method == 'POST':
-        form = AdForm(request.POST, request.FILES, instance=ad)
+        form = AdForm(request.POST, request.FILES, instance=ad, owner=request.user)
         if form.is_valid():
             form.save()
             
@@ -112,7 +109,7 @@ def ad_edit(request, pk):
                 return redirect('ad_detail', ad_id=ad.id)
             return redirect('professional_dashboard')
     else:
-        form = AdForm(instance=ad)
+        form = AdForm(instance=ad, owner=request.user)
     return render(request, 'ads/ad_form.html', {'form': form, 'ad': ad})
 
 @login_required

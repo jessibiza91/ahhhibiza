@@ -1,0 +1,10 @@
+[Unit]
+Description=Ejecuta el backup diario de Ahhh! Ibiza (a las 03:15, con retardo aleatorio; no pisa la renovacion del certificado a las 04:30)
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+RandomizedDelaySec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

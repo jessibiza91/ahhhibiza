@@ -1,9 +1,15 @@
 import io
+import os
+import re
 import tempfile
+from unittest.mock import patch
 
+from django.core import mail
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from PIL import Image
@@ -159,5 +165,225 @@ class RateLimitTestCase(TestCase):
             self.assertEqual(response.status_code, 200)
         response = self.client.post(url, {})
         self.assertEqual(response.status_code, 403)
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class PasswordResetTestCase(TestCase):
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='reset_user',
+            password='old-password-123',
+            email='reset_user@example.com',
+            type=CustomUser.Types.CLIENT,
+        )
+        mail.outbox.clear()
+
+    def _token_from_email(self):
+        body = mail.outbox[0].body
+        match = re.search(r'/reset/([^/]+)/([^/]+)/', body)
+        self.assertIsNotNone(match, body)
+        return match.group(1), match.group(2)
+
+    def test_reset_page_renders(self):
+        response = self.client.get(reverse('password_reset'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Recuperar Contraseña')
+
+    def test_reset_sends_email_with_link(self):
+        response = self.client.post(reverse('password_reset'), {'email': self.user.email})
+        self.assertRedirects(response, reverse('password_reset_done'))
+        self.assertEqual(len(mail.outbox), 1)
+        uid, token = self._token_from_email()
+        self.assertTrue(uid)
+        self.assertTrue(token)
+
+    def test_reset_unknown_email_does_not_reveal_existence(self):
+        response = self.client.post(
+            reverse('password_reset'),
+            {'email': 'noexiste@example.com'},
+        )
+        self.assertRedirects(response, reverse('password_reset_done'))
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_full_flow_changes_password(self):
+        self.client.post(reverse('password_reset'), {'email': self.user.email})
+        uid, token = self._token_from_email()
+        url = reverse('password_reset_confirm', args=[uid, token])
+
+        # Django valida el token y redirige a una URL sin el (set-password)
+        # para no filtrarlo en el Referer.
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        form_url = response['Location']
+
+        response = self.client.get(form_url)
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(form_url, {
+            'new_password1': 'nueva-pass-456',
+            'new_password2': 'nueva-pass-456',
+        })
+        self.assertRedirects(response, reverse('password_reset_complete'))
+
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('nueva-pass-456'))
+        self.assertFalse(self.user.check_password('old-password-123'))
+
+    def test_confirm_rejects_invalid_token(self):
+        response = self.client.get(reverse('password_reset_confirm', args=['invalid', 'invalid']))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'El enlace de recuperación es inválido')
+
+
+@override_settings(AHHH_AUTH_RATE='5/h')
+class PasswordResetRateLimitTestCase(TestCase):
+    def tearDown(self):
+        cache.clear()
+
+    def test_password_reset_is_blocked_after_five_attempts(self):
+        url = reverse('password_reset')
+        for _ in range(5):
+            response = self.client.post(url, {'email': 'x@example.com'})
+            self.assertEqual(response.status_code, 302)
+        response = self.client.post(url, {'email': 'x@example.com'})
+        self.assertEqual(response.status_code, 403)
+
+
+class PasswordChangeTestCase(TestCase):
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='change_user',
+            password='old-pass-123',
+            email='change_user@example.com',
+            type=CustomUser.Types.CLIENT,
+        )
+        self.client.force_login(self.user)
+
+    def test_change_requires_login(self):
+        self.client.logout()
+        response = self.client.get(reverse('password_change'))
+        self.assertRedirects(
+            response,
+            f"{reverse('login')}?next={reverse('password_change')}",
+        )
+
+    def test_change_page_renders(self):
+        response = self.client.get(reverse('password_change'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Cambiar Contraseña')
+
+    def test_change_with_wrong_current_password_is_invalid(self):
+        response = self.client.post(reverse('password_change'), {
+            'old_password': 'wrong-pass-999',
+            'new_password1': 'nueva-pass-456',
+            'new_password2': 'nueva-pass-456',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('old-pass-123'))
+
+    def test_change_updates_password(self):
+        response = self.client.post(reverse('password_change'), {
+            'old_password': 'old-pass-123',
+            'new_password1': 'nueva-pass-456',
+            'new_password2': 'nueva-pass-456',
+        })
+        self.assertRedirects(response, reverse('password_change_done'))
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('nueva-pass-456'))
+        self.assertFalse(self.user.check_password('old-pass-123'))
+
+    def test_change_done_page_renders(self):
+        response = self.client.get(reverse('password_change_done'))
+        self.assertEqual(response.status_code, 200)
+
+
+@override_settings(AHHH_AUTH_RATE='5/h')
+class PasswordChangeRateLimitTestCase(TestCase):
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='change_ratelimited',
+            password='old-pass-123',
+            email='change_ratelimited@example.com',
+            type=CustomUser.Types.CLIENT,
+        )
+        self.client.force_login(self.user)
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_password_change_is_blocked_after_five_attempts(self):
+        url = reverse('password_change')
+        data = {
+            'old_password': 'wrong-pass-999',
+            'new_password1': 'nueva-pass-456',
+            'new_password2': 'nueva-pass-456',
+        }
+        for _ in range(5):
+            response = self.client.post(url, data)
+            self.assertEqual(response.status_code, 200)
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 403)
+
+
+class InitAdminCommandTestCase(TestCase):
+    def test_creates_superuser_with_email(self):
+        with patch.dict(os.environ, {
+            'AHHH_ADMIN_USERNAME': 'Patricia',
+            'AHHH_ADMIN_PASSWORD': 'clave-segura-123',
+            'AHHH_ADMIN_EMAIL': 'patricia@example.com',
+        }, clear=True):
+            call_command('init_admin')
+        user = CustomUser.objects.get(username='Patricia')
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.is_staff)
+        self.assertEqual(user.email, 'patricia@example.com')
+        self.assertTrue(user.check_password('clave-segura-123'))
+
+    def test_creates_superuser_without_email(self):
+        with patch.dict(os.environ, {
+            'AHHH_ADMIN_USERNAME': 'Patricia',
+            'AHHH_ADMIN_PASSWORD': 'clave-segura-123',
+        }, clear=True):
+            call_command('init_admin')
+        user = CustomUser.objects.get(username='Patricia')
+        self.assertEqual(user.email, '')
+
+    def test_updates_email_of_existing_user_without_touching_password(self):
+        CustomUser.objects.create_superuser(
+            username='Patricia',
+            email='',
+            password='clave-antigua-123',
+        )
+        with patch.dict(os.environ, {
+            'AHHH_ADMIN_USERNAME': 'Patricia',
+            'AHHH_ADMIN_PASSWORD': 'otra-clave-999',
+            'AHHH_ADMIN_EMAIL': 'patricia@example.com',
+        }, clear=True):
+            call_command('init_admin')
+        user = CustomUser.objects.get(username='Patricia')
+        self.assertEqual(user.email, 'patricia@example.com')
+        self.assertTrue(user.check_password('clave-antigua-123'))
+
+    def test_keeps_previous_email_when_variable_not_set(self):
+        CustomUser.objects.create_superuser(
+            username='Patricia',
+            email='antigua@example.com',
+            password='clave-segura-123',
+        )
+        with patch.dict(os.environ, {
+            'AHHH_ADMIN_USERNAME': 'Patricia',
+            'AHHH_ADMIN_PASSWORD': 'clave-segura-123',
+        }, clear=True):
+            call_command('init_admin')
+        user = CustomUser.objects.get(username='Patricia')
+        self.assertEqual(user.email, 'antigua@example.com')
+
+    def test_requires_password(self):
+        with patch.dict(os.environ, {
+            'AHHH_ADMIN_USERNAME': 'Patricia',
+        }, clear=True):
+            with self.assertRaises(CommandError):
+                call_command('init_admin')
 
 

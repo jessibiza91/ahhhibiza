@@ -1,0 +1,10 @@
+[Unit]
+Description=Backup diario de Ahhh! Ibiza (base de datos + media)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/ahhh-ibiza
+ExecStart=/bin/sh /opt/ahhh-ibiza/deploy/backup.sh

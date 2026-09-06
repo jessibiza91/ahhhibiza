@@ -8,6 +8,7 @@ Auditoria de cableado y flujos: `docs/cableado_flows_audit_2026-06-20.md`.
 Routemap de consolidacion activo: `docs/consolidation_route_map_2026-07-05.md`.
 Auditoria de rutas administrativas: `docs/admin_route_audit_2026-07-05.md`.
 Auditoria de rutas cliente/profesional: `docs/user_role_route_audit_2026-07-05.md`.
+Pasarela de pago: `docs/pagos_pasarela.md`.
 
 ## Vision del Producto
 
@@ -40,6 +41,7 @@ El proyecto ya contiene:
 - Anuncios con descripcion publica, descripcion HOT, tags de servicios, promocion interna en Tangas y galeria publica/privada.
 - Panel cliente registrado con favoritas y perfiles activos.
 - Dashboard profesional basico.
+- Compra online de Tangas con pasarela simulada (dummy) y webhook idempotente.
 - Age gate y estilo visual base.
 - Backups y lanzadores operativos.
 
@@ -52,6 +54,7 @@ Problemas detectados antes del lanzamiento y estado actual:
 - Corregido: se retiro la logica temporal para un usuario concreto.
 - Corregido: settings configurables por entorno, zona horaria local y protecciones HTTPS al desactivar `DEBUG`.
 - Corregido: filtros de portada por texto y zona; se retiro el selector de categoria.
+- Implementado: recarga online de Tangas con pasarela simulada (dummy); queda conectar una pasarela real adulto-friendly con webhook HTTPS firmado.
 - Validado: contratos autenticados criticos cubiertos por tests; queda revision visual de formularios con sesion.
 
 ## Fase 1 - Estabilizacion Tecnica
@@ -100,6 +103,23 @@ Entrega esperada:
 Objetivo: controlar el uso de almacenamiento y liberar espacio de manera automatica.
 
 Los Tangas son saldo interno del profesional. No son un precio publico, no aparecen en fichas ni detalles para clientes, y sirven para recargar la cuenta profesional, renovar anuncios y consumir promocion/prioridad dentro de la plataforma.
+
+### Compra online de Tangas (implementada, con pasarela simulada)
+
+El flujo de compra esta construido y probado, pero con la pasarela `dummy`:
+solo cobra de verdad cuando se conecte una pasarela real.
+
+- Los profesionales eligen un paquete en su cartera y se crea una orden PENDING.
+- La pasarela (via contrato `BaseGateway`) devuelve una URL de pago.
+- El webhook `/pagos/webhook/` verifica firma, importe y moneda, y acredita el
+  saldo de forma atomica e idempotente (con `select_for_update`).
+- Superadmin gestiona los paquetes (crear, editar, desactivar) desde el panel y
+  desde Django Admin; ordenes y logs de webhook quedan registrados.
+- `AHHH_PAYMENT_GATEWAY` (dummy) y `AHHH_PAYMENT_MODE` (test/live) se configuran
+  por entorno. `dummy` esta bloqueada en produccion.
+
+Pendiente: elegir una pasarela adulto-friendly y conectar su webhook con firma
+en HTTPS. Detalle completo en `docs/pagos_pasarela.md`.
 
 ### Politica de Profesionales Inactivos
 
@@ -168,7 +188,8 @@ Objetivo: poder desplegar con seguridad.
 
 Antes de lanzar, hay que decidir:
 
-- Dominio y hosting objetivo.
+- Pasarela de pago real (adulto-friendly) y precio final de los paquetes de Tangas.
+- Dominio y hosting objetivo (condiciona el webhook HTTPS de la pasarela).
 - Periodo exacto de gracia para profesionales impagados.
 - Si se elimina la cuenta completa o solo media/anuncios tras impago.
 - Cuota inicial por profesional.

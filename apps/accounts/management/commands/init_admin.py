@@ -10,6 +10,7 @@ class Command(BaseCommand):
         User = get_user_model()
         username = os.getenv('AHHH_ADMIN_USERNAME', 'Patricia')
         password = os.getenv('AHHH_ADMIN_PASSWORD')
+        email = os.getenv('AHHH_ADMIN_EMAIL', '').strip()
 
         if not password:
             raise CommandError(
@@ -24,7 +25,16 @@ class Command(BaseCommand):
         self.stdout.write(f"[INFO] Buscando a {username}...")
 
         if not User.objects.filter(username=username).exists():
-            User.objects.create_superuser(username=username, email='', password=password)
+            User.objects.create_superuser(username=username, email=email, password=password)
             self.stdout.write(f"{GREEN}[OK] {username} creada correctamente.{RESET}")
-        else:
-            self.stdout.write(f"{YELLOW}[WARN] Patricia ya existe{RESET}")
+            return
+
+        if email:
+            user = User.objects.get(username=username)
+            if user.email != email:
+                user.email = email
+                user.save(update_fields=['email'])
+                self.stdout.write(f"{GREEN}[OK] Email de {username} actualizado a {email}.{RESET}")
+                return
+
+        self.stdout.write(f"{YELLOW}[WARN] {username} ya existe{RESET}")

@@ -1,7 +1,9 @@
 import logging
 from decimal import Decimal, InvalidOperation
 
+from django.conf import settings
 from django.db import transaction
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import CustomUser
@@ -10,6 +12,18 @@ from .gateways import get_active_gateway
 from .models import RechargeOrder, TangasPackage, Transaction
 
 logger = logging.getLogger(__name__)
+
+
+def public_webhook_url():
+    """URL absoluta del webhook de pagos para configurar en la pasarela.
+
+    Usa AHHH_PUBLIC_BASE_URL si esta definido (dominio publico final, p.ej.
+    https://www.ahhh-ibiza.com). Sin el setting devuelve solo la ruta relativa,
+    util en desarrollo local.
+    """
+    base = getattr(settings, 'AHHH_PUBLIC_BASE_URL', '').rstrip('/')
+    path = reverse('payments:payment_webhook')
+    return f'{base}{path}' if base else path
 
 
 def create_recharge_order(user, package_id):

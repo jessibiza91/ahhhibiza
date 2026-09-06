@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, reverse_lazy
 from django.contrib.auth import views as auth_views
 from . import views
 
@@ -7,6 +7,23 @@ urlpatterns = [
     # LogoutView in recent Django versions might require GET/POST handling adjustments, but standard is GET for simple logout or POST.
     # Configuring 'next_page' to home.
     path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
+    # Recuperacion de contrasena (flujo completo de Django con SMTP)
+    path('reset/password/', views.RateLimitedPasswordResetView.as_view(), name='password_reset'),
+    path('reset/password/done/', auth_views.PasswordResetDoneView.as_view(
+        template_name='registration/password_reset_done.html',
+    ), name='password_reset_done'),
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
+        template_name='registration/password_reset_confirm.html',
+        success_url=reverse_lazy('password_reset_complete'),
+    ), name='password_reset_confirm'),
+    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(
+        template_name='registration/password_reset_complete.html',
+    ), name='password_reset_complete'),
+    # Cambio de contrasena (usuario ya logueado)
+    path('cambiar-contrasena/', views.RateLimitedPasswordChangeView.as_view(), name='password_change'),
+    path('cambiar-contrasena/hecho/', auth_views.PasswordChangeDoneView.as_view(
+        template_name='registration/password_change_done.html',
+    ), name='password_change_done'),
     path('register/', views.register_selector, name='register_selector'),
     path('register/client/', views.client_register, name='client_register'),
     path('register/professional/', views.professional_register, name='professional_register'),

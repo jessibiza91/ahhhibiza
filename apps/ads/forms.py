@@ -1,8 +1,11 @@
 from django import forms
+from django.db import transaction
+from django.utils import timezone
 
 from .models import Ad, PromotionProduct, ServiceTag
 from apps.accounts.forms import MultipleFileInput
 from apps.accounts.media_validators import validate_uploaded_file
+from apps.accounts.models import CustomUser
 
 # Campo que permite subir multiples archivos
 class MultipleFileField(forms.FileField):
@@ -75,18 +78,63 @@ class AdForm(forms.ModelForm):
             'hot_description': 'Contenido reservado para usuarios registrados.',
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, owner=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self._ad_owner = owner
+        # Se captura antes de validar: ModelForm escribe los datos limpios en
+        # self.instance durante is_valid(), lo que enmascara el plan previo.
+        self._original_promotion_product_id = self.instance.promotion_product_id
         self.fields['promotion_product'].queryset = PromotionProduct.objects.filter(is_active=True)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        product = cleaned_data.get('promotion_product')
+        # El primer dia de un plan de pago se cobra al elegirlo (ver save()).
+        # Solo se exige saldo cuando el plan cambia: mantener el plan actual
+        # nunca vuelve a cobrar.
+        if (
+            product is not None
+            and product.price_tangas > 0
+            and product.id != self._original_promotion_product_id
+        ):
+            owner = self._ad_owner or self.instance.owner
+            if owner and owner.tangas_balance < product.price_tangas:
+                self.add_error(
+                    'promotion_product',
+                    f'Saldo insuficiente de Tangas para este plan '
+                    f'(coste por dia: {product.price_tangas} T).',
+                )
+        return cleaned_data
 
     def save(self, commit=True):
         ad = super().save(commit=False)
+        if self._ad_owner is not None:
+            ad.owner = self._ad_owner
         product = self.cleaned_data.get('promotion_product')
         ad.promotion_product = product
         ad.price_tangas = product.price_tangas if product else 0
+
+        # Primer dia de un plan de pago: se descuenta al elegirlo (no al
+        # renovar un plan ya activo). Marca last_tangas_charged_at para que el
+        # cron diario no vuelva a cobrar el mismo dia.
+        first_day_charge = (
+            product is not None
+            and product.price_tangas > 0
+            and product.id != self._original_promotion_product_id
+        )
+
         if commit:
-            ad.save()
-            self.save_m2m()
+            with transaction.atomic():
+                if first_day_charge:
+                    owner = CustomUser.objects.select_for_update().get(pk=ad.owner_id)
+                    owner.tangas_balance -= product.price_tangas
+                    owner.save(update_fields=['tangas_balance'])
+                    ad.last_tangas_charged_at = timezone.localdate()
+                ad.save()
+                self.save_m2m()
+        else:
+            if first_day_charge:
+                ad.last_tangas_charged_at = timezone.localdate()
         return ad
 
 

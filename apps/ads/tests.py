@@ -1,13 +1,20 @@
 import io
 import tempfile
+from datetime import date
+from decimal import Decimal
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 from PIL import Image
 
 from apps.accounts.models import CustomUser, FavoriteAd, ProfileMedia, SiteConfiguration
-from apps.ads.models import Ad, AdImage, ServiceTag
+from apps.ads.forms import AdForm
+from apps.ads.models import Ad, AdImage, PromotionProduct, ServiceTag
+from apps.ads.services import charge_daily_tangas
 from apps.payments.models import Transaction
 
 
@@ -456,4 +463,214 @@ class AdMediaUploadTestCase(TestCase):
         )
         ad = Ad.objects.get(title='Anuncio valido')
         self.assertEqual(ad.gallery.count(), 1)
+
+
+class DailyTangasChargeTestCase(TestCase):
+    """Consumo diario de Tangas segun el plan del anuncio."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.professional = CustomUser.objects.create_user(
+            username='charger_pro',
+            password='test-password',
+            email='charger_pro@example.com',
+            type=CustomUser.Types.PROFESSIONAL,
+        )
+        cls.trashed_professional = CustomUser.objects.create_user(
+            username='charger_trashed',
+            password='test-password',
+            email='charger_trashed@example.com',
+            type=CustomUser.Types.PROFESSIONAL,
+        )
+        cls.trashed_professional.trashed_at = timezone.now()
+        cls.trashed_professional.save(update_fields=['trashed_at'])
+
+        cls.basic = PromotionProduct.objects.get(name='Basico')
+        cls.featured = PromotionProduct.objects.get(name='Destacado')
+
+    def _ad(self, owner=None, plan=None, status=Ad.Status.ACTIVE):
+        ad = Ad.objects.create(
+            owner=owner or self.professional,
+            title='Anuncio de consumo',
+            promotion_product=plan,
+            price_tangas=plan.price_tangas if plan else 0,
+            status=status,
+        )
+        return ad
+
+    def _form_data(self, product):
+        return {
+            'title': 'Anuncio de consumo',
+            'public_description': 'Descripcion de prueba.',
+            'hot_description': '',
+            'services': [],
+            'promotion_product': str(product.pk),
+            'status': Ad.Status.ACTIVE,
+        }
+
+    def _set_balance(self, amount):
+        self.professional.tangas_balance = Decimal(str(amount))
+        self.professional.save(update_fields=['tangas_balance'])
+
+    def test_charge_deducts_daily_cost(self):
+        self._set_balance('25.00')
+        ad = self._ad(plan=self.featured)
+
+        result = charge_daily_tangas()
+
+        self.professional.refresh_from_db()
+        ad.refresh_from_db()
+        self.assertEqual(result['charged'], 1)
+        self.assertEqual(self.professional.tangas_balance, Decimal('15.00'))
+        self.assertEqual(ad.last_tangas_charged_at, timezone.localdate())
+        self.assertEqual(ad.promotion_product, self.featured)
+
+    def test_charge_is_idempotent_same_day(self):
+        self._set_balance('25.00')
+        self._ad(plan=self.featured)
+
+        charge_daily_tangas()
+        self.professional.refresh_from_db()
+        result = charge_daily_tangas()
+        self.professional.refresh_from_db()
+
+        self.assertEqual(result['charged'], 0)
+        self.assertEqual(self.professional.tangas_balance, Decimal('15.00'))
+
+    def test_insufficient_balance_downgrades_to_basic(self):
+        self._set_balance('5.00')
+        ad = self._ad(plan=self.featured)
+
+        result = charge_daily_tangas()
+
+        ad.refresh_from_db()
+        self.professional.refresh_from_db()
+        self.assertEqual(result['downgraded'], 1)
+        self.assertEqual(ad.promotion_product, self.basic)
+        self.assertEqual(ad.price_tangas, 0)
+        self.assertEqual(ad.status, Ad.Status.ACTIVE)
+        self.assertEqual(ad.last_tangas_charged_at, timezone.localdate())
+        self.assertEqual(self.professional.tangas_balance, Decimal('5.00'))
+
+    def test_dry_run_makes_no_changes(self):
+        self._set_balance('25.00')
+        ad = self._ad(plan=self.featured)
+
+        result = charge_daily_tangas(dry_run=True)
+
+        self.professional.refresh_from_db()
+        ad.refresh_from_db()
+        self.assertEqual(result['charged'], 1)
+        self.assertEqual(self.professional.tangas_balance, Decimal('25.00'))
+        self.assertIsNone(ad.last_tangas_charged_at)
+
+    def test_skips_cerrado_trashed_and_free_plan_ads(self):
+        self._set_balance('100.00')
+        self._ad(plan=self.featured, status=Ad.Status.CERRADO)
+        trashed = self._ad(plan=self.featured)
+        trashed.send_to_trash()
+        self._ad(plan=self.basic)
+
+        result = charge_daily_tangas()
+
+        self.assertEqual(result['charged'], 0)
+        self.assertEqual(result['downgraded'], 0)
+
+    def test_skips_owner_trashed_ad(self):
+        ad = self._ad(owner=self.trashed_professional, plan=self.featured)
+
+        result = charge_daily_tangas()
+
+        ad.refresh_from_db()
+        self.assertEqual(result['charged'], 0)
+        self.assertIsNone(ad.last_tangas_charged_at)
+
+    def test_form_rejects_paid_plan_without_balance(self):
+        self._set_balance('5.00')
+
+        form = AdForm(self._form_data(self.featured), owner=self.professional)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('promotion_product', form.errors)
+
+    def test_form_charges_first_day_on_save(self):
+        self._set_balance('25.00')
+
+        form = AdForm(self._form_data(self.featured), owner=self.professional)
+        self.assertTrue(form.is_valid(), form.errors)
+
+        ad = form.save()
+
+        self.professional.refresh_from_db()
+        ad.refresh_from_db()
+        self.assertEqual(self.professional.tangas_balance, Decimal('15.00'))
+        self.assertEqual(ad.price_tangas, 10)
+        self.assertEqual(ad.promotion_product, self.featured)
+        self.assertEqual(ad.last_tangas_charged_at, timezone.localdate())
+
+    def test_form_does_not_charge_when_plan_unchanged(self):
+        self._set_balance('25.00')
+        ad = self._ad(plan=self.featured)
+
+        form = AdForm(self._form_data(self.featured), instance=ad, owner=self.professional)
+        self.assertTrue(form.is_valid(), form.errors)
+
+        form.save()
+
+        self.professional.refresh_from_db()
+        self.assertEqual(self.professional.tangas_balance, Decimal('25.00'))
+
+    def test_form_switch_to_basic_does_not_charge(self):
+        self._set_balance('25.00')
+        ad = self._ad(plan=self.featured)
+
+        form = AdForm(self._form_data(self.basic), instance=ad, owner=self.professional)
+        self.assertTrue(form.is_valid(), form.errors)
+
+        form.save()
+
+        ad.refresh_from_db()
+        self.professional.refresh_from_db()
+        self.assertEqual(ad.promotion_product, self.basic)
+        self.assertEqual(ad.price_tangas, 0)
+        self.assertEqual(self.professional.tangas_balance, Decimal('25.00'))
+
+    def test_command_charges_and_reports(self):
+        self._set_balance('25.00')
+        self._ad(plan=self.featured)
+
+        out = io.StringIO()
+        call_command('consume_plan_tangas', stdout=out)
+
+        self.professional.refresh_from_db()
+        self.assertEqual(self.professional.tangas_balance, Decimal('15.00'))
+        self.assertIn('Total: 1 cobrado(s), 0 degradado(s)', out.getvalue())
+
+    def test_command_dry_run_does_not_charge(self):
+        self._set_balance('25.00')
+        self._ad(plan=self.featured)
+
+        out = io.StringIO()
+        call_command('consume_plan_tangas', '--dry-run', stdout=out)
+
+        self.professional.refresh_from_db()
+        self.assertEqual(self.professional.tangas_balance, Decimal('25.00'))
+        self.assertIn('SIMULACION', out.getvalue())
+
+    def test_command_rejects_invalid_date(self):
+        with self.assertRaises(CommandError):
+            call_command('consume_plan_tangas', '--date', '2026-13-99')
+
+    def test_command_charge_for_specific_date(self):
+        self._set_balance('25.00')
+        ad = self._ad(plan=self.featured)
+        ad.last_tangas_charged_at = date(2026, 1, 1)
+        ad.save(update_fields=['last_tangas_charged_at'])
+
+        call_command('consume_plan_tangas', '--date', '2026-01-02', stdout=io.StringIO())
+
+        ad.refresh_from_db()
+        self.professional.refresh_from_db()
+        self.assertEqual(ad.last_tangas_charged_at, date(2026, 1, 2))
+        self.assertEqual(self.professional.tangas_balance, Decimal('15.00'))
 
