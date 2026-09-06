@@ -11,7 +11,8 @@ RUN pip install --no-cache-dir -r requirements/prod.txt
 
 COPY . .
 
-RUN useradd --create-home --shell /usr/sbin/nologin appuser \
+RUN chmod +x deploy/entrypoint.sh \
+    && useradd --create-home --shell /usr/sbin/nologin appuser \
     && chown -R appuser:appuser /app
 
 EXPOSE 8000
