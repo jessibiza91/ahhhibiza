@@ -1,18 +1,32 @@
 # Estado Actual - Ahhh! Ibiza
 
-Ultima revision: 2026-08-12.
+Ultima revision: 2026-09-12.
 
 Documentos de referencia:
 
+- `docs/despliegue.md`: guia unica de despliegue (incluye la referencia de produccion).
 - `docs/roadmap.md`: vision y fases maestras.
-- `docs/consolidation_route_map_2026-07-05.md`: ejecucion activa.
-- `docs/ux_product_audit_2026-06-20.md`: auditoria de producto y UX.
-- `docs/cableado_flows_audit_2026-06-20.md`: auditoria funcional.
 - `docs/pagos_pasarela.md`: pasarela de pago (arquitectura y pendientes).
+- `docs/archivo/`: auditorias y route maps historicos (solo contexto, no son fuente de verdad).
 
 ## Estado General
 
 La plataforma es un prototipo avanzado funcional en consolidacion. Los flujos principales de cliente, profesional y superadmin existen, y las rutas criticas tienen una primera suite automatizada (63 tests).
+
+## Produccion (desplegada)
+
+El sitio esta publicado en produccion:
+
+- **URL**: https://ahibiza.com (dominio real, con una h: `ahibiza.com`).
+- **Servidor**: 103.6.171.164, Ubuntu + Docker Compose (`docs/despliegue.md`).
+- **HTTPS**: certificado real de Let's Encrypt activo, con renovacion automatica
+  (timer `ahhh-certbot-renew`). `www` aun sin registro en DNS: el certificado
+  cubre solo el dominio principal.
+- **Pasarela**: `AHHH_PAYMENT_GATEWAY=disabled` (la recarga online de Tangas
+  muestra "no disponible"; el superadmin ajusta saldo manualmente).
+- **Automatismos activos**: backup diario (DB + media) y cobro diario de Tangas
+  de los planes de anuncios.
+- Detalles y redespilegue desde cero: `docs/despliegue.md`.
 
 El ciclo de compra online de Tangas esta implementado con una pasarela simulada (`dummy`) que permite probar de punta a punta sin cobrar. No esta lista para cobrar de verdad: falta elegir una pasarela adulto-friendly, conectar su webhook con firma en HTTPS y cerrar pagos, retencion y auditoria de moderacion.
 
@@ -75,6 +89,9 @@ El ciclo de compra online de Tangas esta implementado con una pasarela simulada 
 - Rutas cliente y profesional auditadas sin fugas a Django.
 - Navegacion compacta en telefono.
 - Barra de contacto fija en detalle para telefono.
+- Despliegue Docker en produccion con HTTPS real (Let's Encrypt + renovacion automatica) en `ahibiza.com`; nginx con redireccion 80->443 y reto ACME webroot (`docs/despliegue.md`).
+- Backups diarios (DB + media), timer systemd y copia opcional off-site con rclone/B2.
+- Consumo diario de Tangas de los planes de anuncios con timer systemd y degradacion a plan basico.
 
 ## Validacion
 
@@ -95,11 +112,9 @@ El ciclo de compra online de Tangas esta implementado con una pasarela simulada 
 5. Registrar acciones de moderacion.
 6. Definir consumo, caducidad y renovacion de promociones en Tangas.
 7. Definir pago, gracia, suspension y retencion antes de automatizar borrados.
-8. Preparar hosting, dominio, HTTPS, static/media y backups restaurables.
 
 ## Decisiones Pendientes
 
-- Hosting y dominio final (condiciona el webhook HTTPS de la pasarela).
 - Pasarela de pago real adulto-friendly y precio final de los paquetes de Tangas.
 - Regla exacta de consumo y renovacion de Tangas.
 - Politica de reembolso de recargas.

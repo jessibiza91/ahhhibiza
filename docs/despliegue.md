@@ -3,6 +3,28 @@
 Guía paso a paso para subir el proyecto a un servidor (VPS) con Docker.
 Está pensada para que la siga una persona sin experiencia previa en despliegues.
 
+> **TL;DR para redesplegar de cero:** sección 4 (primer despliegue) → 5
+> (systemd) → 7 (HTTPS) → 8 (backups). El resto son notas de contexto.
+
+## Referencia del despliegue real actual
+
+El sitio ya está en producción. Esto es lo que hay ahora mismo:
+
+- **Dominio**: `ahibiza.com` (registro A apuntando a la IP del servidor; `www`
+  aún sin registro en DNS, por lo que el certificado cubre solo el dominio).
+- **Servidor**: 103.6.171.164 (Ubuntu + Docker Compose).
+- **HTTPS**: certificado real de Let's Encrypt con renovación automática (timer
+  `ahhh-certbot-renew`). Por el historial de la primera emisión, nginx usa la
+  ruta `/etc/letsencrypt/live/ahibiza.com-0001/` en `deploy/nginx/ahhh.conf`.
+- **`.env`**: `AHHH_DOMAIN=ahibiza.com`, `AHHH_NGINX_CONF=ahhh.conf`,
+  `AHHH_PAYMENT_GATEWAY=disabled`, cookies seguras activas (`DEBUG=false`).
+- **Automatismos activos**: backup diario de la base + media y timer de cobro
+  diario de Tangas.
+
+> Si el dominio cambia o se añade `www`, actualiza `AHHH_DOMAIN`, las rutas
+> `ssl_certificate` de `deploy/nginx/ahhh.conf` y reemite con
+> `deploy/install_https.sh`.
+
 ## 1. Que se instala
 
 El proyecto se ejecuta como 4 contenedores orquestados por Docker Compose:
@@ -130,7 +152,7 @@ Notas:
   Django usa la pasarela `dummy` por defecto y el arranque falla (payments.E001).
 - El `.env` no debe versionarse ni compartirse.
 
-### 4.2bis Alternativa: despliegue por IP sin dominio (fase temporal)
+### 4.3 Alternativa: despliegue por IP sin dominio (fase temporal)
 
 Si aun no tienes un dominio apuntando al servidor, puedes desplegar accediendo
 directamente por la **IP publica** (por ejemplo `http://103.6.171.164`). En esa
@@ -163,7 +185,7 @@ AHHH_CSRF_COOKIE_SECURE=false
 Notas de esta modalidad:
 
 - **Sin `AHHH_DOMAIN`**: mientras no haya dominio no se ejecuta
-  `install_https.sh`; se omite el paso 4.3.
+  `install_https.sh`; se omite el paso 4.4.
 - **`AHHH_NGINX_CONF=ahhh.http.conf`**: docker compose monta el config de nginx
   que escucha solo en el puerto 80, sin certificado (el montado por defecto,
   `ahhh.conf`, exige el certificado de Let's Encrypt y nginx no arranca sin el).
@@ -171,12 +193,16 @@ Notas de esta modalidad:
   las cookies de sesion y CSRF como `Secure`, y los navegadores no las guardan
   por HTTP: el login y los formularios (CSRF) fallarian. Al pasar a HTTPS (paso
   7) borra estas tres variables o ponlas en `true`.
+- **No quites `127.0.0.1` de `AHHH_ALLOWED_HOSTS`**: el healthcheck de Docker
+  de la app consulta `http://127.0.0.1:8000/health/`, y si ese host no esta en
+  la lista Django responde 400 y el contenedor queda `unhealthy`. En produccion
+  deja algo como `tu-dominio.com,www.tu-dominio.com,localhost,127.0.0.1,[::1]`.
 - **Recarga de Tangas**: con `AHHH_PAYMENT_GATEWAY=disabled` el sitio funciona
   completo pero la recarga online muestra "no disponible" hasta que se integre
   una pasarela real (el superadmin puede seguir ajustando saldo manualmente).
 - Verifica con `curl http://<IP>/health/` (sin `-k`, ya no hay HTTPS).
 
-### 4.3 Preparar el certificado (obligatorio antes del primer arranque)
+### 4.4 Preparar el certificado (obligatorio antes del primer arranque)
 
 nginx ya escucha en el puerto 443 (ver `deploy/nginx/ahhh.conf`), así que
 necesita un certificado para arrancar. El script `install_https.sh` crea uno
@@ -196,7 +222,24 @@ sudo ./deploy/install_https.sh
 El script es idempotente: repítelo más adelante (cuando el dominio apunte al
 servidor) para pasar del certificado temporal al real.
 
-### 4.4 Arrancar el stack
+Comportamiento del script (no requiere pasos manuales):
+
+- **`www` opcional**: solo incluye `www.DOMINIO` en el certificado si ese
+  subdominio resuelve en DNS (`getent hosts www.DOMINIO`). Si no tienes acceso
+  al DNS y no hay registro para `www`, el certificado se emite solo para el
+  dominio principal sin que el script falle.
+- **Autofirmado que no bloquea a certbot**: antes de emitir, el script aparta
+  el certificado temporal a una carpeta propia
+  (`/etc/letsencrypt/ahhh-bootstrap/`). Así `live/$DOMAIN` queda libre y
+  certbot no se niega con "live directory exists" (y no se generan nombres con
+  sufijo `-0001`). Si la emisión falla, el temporal se restaura y el sitio
+  sigue funcionando.
+- **Ruta del certificado**: `deploy/nginx/ahhh.conf` debe apuntar a
+  `/etc/letsencrypt/live/<AHHH_DOMAIN>/`. Si usas un dominio distinto al de
+  ejemplo (`ahhh-ibiza.com`) que lleva el conf, cambia esas dos líneas o nginx
+  no arranca (ver "Problemas frecuentes" más abajo).
+
+### 4.5 Arrancar el stack
 
 ```bash
 sudo docker compose up -d --build
@@ -216,7 +259,7 @@ sudo docker compose ps
 
 Debes ver los 4 contenedores `Up` y con estado `(healthy)`.
 
-### 4.5 Verificar
+### 4.6 Verificar
 
 ```bash
 curl https://localhost/health/ -k
@@ -280,9 +323,10 @@ El stack ya sirve por HTTPS desde el primer arranque, pero con un certificado
 autofirmado temporal (el navegador muestra advertencia). Para obtener el
 certificado real:
 
-1. Apunta tu dominio al IP del servidor (registro A para `tu-dominio.com` y
-   `www.tu-dominio.com`) y abre los puertos 80 y 443 en el firewall. Let's
-   Encrypt valida el reto a través del puerto 80.
+1. Apunta tu dominio al IP del servidor (registro A) y abre los puertos 80 y
+   443 en el firewall. Let's Encrypt valida el reto a través del puerto 80.
+   El subdominio `www` es opcional: si no lo usas, el script emite el
+   certificado solo para el dominio (ver 4.4).
 
 2. Instala `certbot` en el host (si no está):
 
@@ -290,7 +334,7 @@ certificado real:
    sudo apt install -y certbot openssl
    ```
 
-3. Ejecuta de nuevo el mismo script del paso 4.3 (esta vez emitirá el
+3. Ejecuta de nuevo el mismo script del paso 4.4 (esta vez emitirá el
    certificado real, sin cortar el servicio):
 
    ```bash
@@ -310,7 +354,7 @@ Cómo funciona:
 - `install_https.sh` usa el reto **webroot** (nginx sirve
   `/.well-known/acme-challenge/` desde el webroot montado), así que no hay que
   parar nginx para emitir ni renovar.
-- El mismo script ya activó la **renovación automática** en el paso 4.3: el
+- El mismo script ya activó la **renovación automática** en el paso 4.4: el
   timer `ahhh-certbot-renew` ejecuta `deploy/ssl_renew.sh` a diario y solo
   renueva cuando faltan menos de 30 días, recargando nginx sin cortar el
   servicio. Comprueba que está activo:
@@ -322,6 +366,29 @@ Cómo funciona:
 - Los certificados viven en `/etc/letsencrypt` (host) y se montan de solo
   lectura en el contenedor nginx (`docker-compose.yml`). No se pierden al
   recrear contenedores.
+
+### 7.1 Problemas frecuentes con HTTPS
+
+- **nginx en bucle de reinicio (`Container ... is restarting`)**: casi siempre
+  es la ruta del certificado en `deploy/nginx/ahhh.conf` (líneas
+  `ssl_certificate`). Debe ser `/etc/letsencrypt/live/<tu-dominio>/fullchain.pem`
+  y `privkey.pem`, con el mismo dominio que `AHHH_DOMAIN`. Verifica con
+  `docker logs ahhh_nginx --tail 20` (error `cannot load certificate`) y con
+  `grep -n ssl_certificate deploy/nginx/ahhh.conf`. Si la emisión generó un
+  nombre con sufijo (`ahibiza.com-0001`), apunta esas líneas a esa ruta exacta.
+- **Certbot dice "live directory exists" o la emisión falla sin más**: quedaba
+  el certificado temporal autofirmado en `$LIVE_DIR`. Con el script actual esto
+  ya no pasa (aparta el temporal automáticamente). Si ya estás en ese estado,
+  borra la carpeta `/${AHHH_DOMAIN}` de `/etc/letsencrypt/live/`, ejecuta
+  `certbot certonly --webroot -w deploy/certbot/www -d tu-dominio.com` y recarga
+  nginx.
+- **`ahhh_app` queda `unhealthy`**: revisa
+  `docker inspect ahhh_app --format '{{json .State.Health}}'`. Si el motivo es
+  `HTTP Error 400: Bad Request`, es que `127.0.0.1` falta en
+  `AHHH_ALLOWED_HOSTS` (el healthcheck consulta `http://127.0.0.1:8000/health/`).
+- **El navegador sigue mostrando advertencia/aún sirve el autofirmado**:
+  recarga nginx tras emitir (`docker compose exec nginx nginx -s reload`) y
+  verifica con `curl https://tu-dominio.com/health/` (sin `-k` y sin error).
 
 ## 8. Copias de seguridad
 
@@ -416,7 +483,7 @@ sudo ./deploy/restore.sh db backups/daily/db_ahhh_2026-01-01.sql.gz
 sudo ./deploy/restore.sh media backups/daily/media_ahhh_2026-01-01.tar.gz
 ```
 
-### 8.4 Saca las copias del servidor
+### 8.5 Saca las copias del servidor
 
 La rotacion solo protege contra errores de datos, no contra fallos del disco o
 del servidor. Programa la salida de `backups/` del servidor (scp, rclone o S3)
@@ -485,7 +552,7 @@ cuantas veces se ejecute el mismo dia, cada anuncio paga una sola vez.
   pero el navegador mostrará una advertencia de seguridad (es esperable).
   No uses `AHHH_SECURE_SSL_REDIRECT=false` en producción: rompería la
   redirección HTTP→HTTPS a nivel de Django. La excepción es el despliegue
-  temporal por IP sin certificado (sección 4.2bis): allí se usa
+  temporal por IP sin certificado (sección 4.3): allí se usa
   `ahhh.http.conf` y se ponen `AHHH_SECURE_SSL_REDIRECT`, `AHHH_SESSION_COOKIE_SECURE`
   y `AHHH_CSRF_COOKIE_SECURE` en `false` para que login y CSRF funcionen por HTTP.
 - **Renovación del certificado**: la gestiona el timer

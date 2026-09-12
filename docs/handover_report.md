@@ -4,11 +4,13 @@
 
 Este proyecto sigue una estructura maestra. No cambiar la organizacion sin actualizar `docs/`.
 
+Relacion de documentos: `docs/README.md` (indice).
+Referencia de produccion y despliegue: `docs/despliegue.md`.
 Referencia principal: `docs/roadmap.md`.
 
 ## Reglas Clave
 
-1. **Leer documentacion primero**: empezar por `docs/roadmap.md`, `docs/state_of_play.md` y `docs/todo.md`.
+1. **Leer documentacion primero**: empezar por `docs/README.md`, `docs/roadmap.md`, `docs/state_of_play.md` y `docs/todo.md`.
 2. **Lanzadores centralizados**: las operaciones frecuentes deben vivir en `launchers/`.
 3. **Base de datos**: PostgreSQL 16 vía Docker Compose (`docker compose up -d db`); superadmin con `manage.py init_admin`.
 4. **No ensuciar la raiz**: nuevos scripts en `maintenance/`, documentacion en `docs/`, logica de negocio en `apps/`.
@@ -27,7 +29,8 @@ Referencia principal: `docs/roadmap.md`.
 - `media`: archivos subidos.
 - `maintenance`: scripts internos.
 - `launchers`: `.bat` de ejecucion y mantenimiento.
-- `docs`: fuente de verdad del estado del proyecto.
+- `docs`: fuente de verdad del estado del proyecto (`README.md` es el indice; `archivo/` conserva notas historicas).
+- `deploy/`: despliegue Docker (nginx, entrypoint, certificados HTTPS, backups, timers).
 
 ## Contexto del Producto
 
@@ -56,5 +59,5 @@ Ahhh! Ibiza es un marketplace/directorio adulto para profesionales y usuarios re
 - Las plantillas principales usan `ad.cover_image` para portada de anuncio.
 - La ruta de borrado de imagenes de anuncio esta conectada en `apps/ads/urls.py`.
 - `maintenance/clean_structure.py` solo borra caches Python; no borra migraciones.
-- Falta validar flujo autenticado completo en navegador.
-- Settings siguen siendo de desarrollo; no lanzar publicamente sin endurecer configuracion.
+- El sitio esta en produccion (https://ahibiza.com) con HTTPS real de Let's Encrypt y renovacion automatica. El dominio real es `ahibiza.com` (con una h); los ejemplos de la documentacion usan `ahhh-ibiza.com`/`tu-dominio.com` y hay que ajustarlos al dominio propio en el `.env` y en `deploy/nginx/ahhh.conf`.
+- La pasarela de pagos esta en `disabled`: la recarga online bloqueada hasta integrar una pasarela real (ver `docs/pagos_pasarela.md`).
