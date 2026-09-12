@@ -2,13 +2,10 @@
 
 Este documento es la referencia viva para saber que estamos haciendo, por que lo hacemos y en que punto esta el proyecto.
 
-Route map operativo UX/lanzamiento: `docs/ux_launch_route_map.md`.
-Auditoria de producto y UX: `docs/ux_product_audit_2026-06-20.md`.
-Auditoria de cableado y flujos: `docs/cableado_flows_audit_2026-06-20.md`.
-Routemap de consolidacion activo: `docs/consolidation_route_map_2026-07-05.md`.
-Auditoria de rutas administrativas: `docs/admin_route_audit_2026-07-05.md`.
-Auditoria de rutas cliente/profesional: `docs/user_role_route_audit_2026-07-05.md`.
+Estado actual (incluida la produccion): `docs/state_of_play.md`.
+Indice de documentacion: `docs/README.md`.
 Pasarela de pago: `docs/pagos_pasarela.md`.
+Notas historicas (auditorias y route maps): `docs/archivo/`.
 
 ## Vision del Producto
 
@@ -191,8 +188,12 @@ Objetivo: poder desplegar con seguridad.
 Antes de lanzar, hay que decidir:
 
 - Pasarela de pago real (adulto-friendly) y precio final de los paquetes de Tangas.
-- Dominio y hosting objetivo (condiciona el webhook HTTPS de la pasarela).
 - Periodo exacto de gracia para profesionales impagados.
 - Si se elimina la cuenta completa o solo media/anuncios tras impago.
 - Cuota inicial por profesional.
 - Si los usuarios registrados ven todo el contenido HOT gratis o si habra capas de pago.
+
+### Ya resuelto (produccion)
+
+- Dominio y hosting: `ahibiza.com` en 103.6.171.164 con HTTPS real (Let's Encrypt)
+  y renovacion automatica. Detalles en `docs/despliegue.md`.

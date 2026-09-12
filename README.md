@@ -127,20 +127,25 @@ Orden recomendado para un dev nuevo o tras clonar: `SETUP.bat` → `SMART_MIGRAT
 ## Produccion
 
 El proyecto incluye un despliegue Docker completo (app + nginx + PostgreSQL + Redis)
-pensado para que lo ejecute una persona sin experiencia en despliegues:
+pensado para que lo ejecute una persona sin experiencia en despliegues. El sitio
+ya esta publicado en https://ahibiza.com con HTTPS real (Let's Encrypt).
 
 - `docker-compose.yml` orquesta los 4 servicios.
 - `Dockerfile` construye la app (gunicorn).
 - `deploy/` contiene `entrypoint.sh` (migrate + init_admin + collectstatic),
-  `nginx/ahhh.conf` (proxy, static y media) y `systemd/ahhh.service`.
+  `nginx/ahhh.conf` (HTTPS, static y media) / `ahhh.http.conf` (solo HTTP por IP),
+  `install_https.sh` + `ssl_renew.sh` (certificado Let's Encrypt y renovacion
+  automatica), `backup_db.sh`/`backup.sh`/`restore.sh` (copias de seguridad),
+  timers de systemd (stack, backups, renovacion SSL, cobro diario de Tangas).
 - `requirements/base.txt`, `requirements/dev.txt`, `requirements/prod.txt`.
 
-Guia paso a paso en `docs/despliegue.md`.
+**Guia unica para desplegar o redespaldar: `docs/despliegue.md`** (incluye la
+referencia del despliegue real actual: dominio, IP y automatismos activos).
 
 Los profesionales compran Tangas online: la pasarela esta abstraida tras una
-interfaz comun y en desarrollo usa `dummy` (no cobra nada). Pendiente elegir una
-pasarela real adulto-friendly y conectar su webhook con firma en HTTPS.
-Detalle y arquitectura en `docs/pagos_pasarela.md`.
+interfaz comun y en desarrollo usa `dummy` (no cobra nada). En produccion esta
+en `disabled` hasta elegir una pasarela real adulto-friendly y conectar su
+webhook con firma en HTTPS. Detalle y arquitectura en `docs/pagos_pasarela.md`.
 
 Mas detalle en `docs/roadmap.md` (vision y fases maestras) y `docs/state_of_play.md` (estado actual del proyecto).
 
@@ -175,10 +180,14 @@ carpeta de destino. Guia completa en `docs/despliegue.md`.
 
 ## Documentacion
 
-`docs/` es la fuente de verdad del estado del proyecto. Antes de tocar codigo, lee:
+`docs/` es la fuente de verdad del estado del proyecto. **`docs/README.md` es el
+indice maestro**: segun lo que necesites, lee un solo documento. Para desplegar
+lee `docs/despliegue.md`; para contribuir, en orden:
 
 - `docs/roadmap.md`
 - `docs/state_of_play.md`
 - `docs/todo.md`
 - `docs/pagos_pasarela.md` — pasarela de pago: arquitectura y como anadir una real
 - `docs/handover_report.md` — reglas clave para contribuir (no ensuciar la raiz, actualizar docs, etc.)
+
+Las auditorias y route maps fechados viven en `docs/archivo/` (solo contexto historico).

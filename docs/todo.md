@@ -1,9 +1,9 @@
 # Tareas del Proyecto "Ahhh! Ibiza"
 
-Ver tambien: `docs/roadmap.md`.
-Route map UX: `docs/ux_launch_route_map.md`.
+Ver tambien: `docs/roadmap.md`, `docs/state_of_play.md`.
+Indice de documentacion: `docs/README.md`.
 Journeys UX: `docs/ux_user_journeys.md`.
-Routemap de consolidacion: `docs/consolidation_route_map_2026-07-05.md`.
+Notas historicas: `docs/archivo/`.
 
 ## Completado
 
@@ -41,6 +41,9 @@ Routemap de consolidacion: `docs/consolidation_route_map_2026-07-05.md`.
 - [x] Cambio de contrasena desde sesion iniciada (Django PasswordChangeView, rate-limited) con 6 tests.
 - [x] `init_admin` asigna correo al superadmin desde `AHHH_ADMIN_EMAIL` (idempotente, sin tocar la contrasena) con 5 tests.
 - [x] Exencion de cobro de Tangas por anuncio (solo superadmin): los anuncios exentos no pagan Tangas aunque tengan plan de pago (ni cobro diario ni primer dia) y no se les exige saldo; motivo opcional visible en el panel de control.
+- [x] Backup automatico de la base de datos (pg_dump comprimido + rotacion + subida opcional a Backblaze B2 via rclone) y copias DB+media con timer systemd.
+- [x] Consumo diario de Tangas de los planes de anuncios con timer systemd (degradacion a plan basico, idempotente por anuncio y dia).
+- [x] Despliegue de produccion en `ahibiza.com`: Docker Compose + nginx HTTPS con certificado real de Let's Encrypt y renovacion automatica (temporal autofirmado para arranque y despliegue por IP sin HTTPS documentados en `docs/despliegue.md`).
 
 ## Ahora - Fase 1: Estabilizacion Tecnica
 
