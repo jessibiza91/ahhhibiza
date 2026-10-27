@@ -4,11 +4,13 @@ from django.core.exceptions import ImproperlyConfigured
 from .base import BaseGateway
 from .disabled import DisabledGateway
 from .dummy import DummyGateway
+from .eupago import EupagoGateway
 
 
 _GATEWAYS = {
     'dummy': DummyGateway,
     'disabled': DisabledGateway,
+    'eupago': EupagoGateway,
 }
 
 

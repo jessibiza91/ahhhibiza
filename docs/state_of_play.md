@@ -1,6 +1,6 @@
 # Estado Actual - Ahhh! Ibiza
 
-Ultima revision: 2026-09-12.
+Ultima revision: 2026-10-20.
 
 Documentos de referencia:
 
@@ -11,7 +11,7 @@ Documentos de referencia:
 
 ## Estado General
 
-La plataforma es un prototipo avanzado funcional en consolidacion. Los flujos principales de cliente, profesional y superadmin existen, y las rutas criticas tienen una primera suite automatizada (63 tests).
+La plataforma es un prototipo avanzado funcional en consolidacion. Los flujos principales de cliente, profesional y superadmin existen, y las rutas criticas tienen una suite automatizada de 136 tests.
 
 ## Produccion (desplegada)
 
@@ -20,15 +20,45 @@ El sitio esta publicado en produccion:
 - **URL**: https://ahibiza.com (dominio real, con una h: `ahibiza.com`).
 - **Servidor**: 103.6.171.164, Ubuntu + Docker Compose (`docs/despliegue.md`).
 - **HTTPS**: certificado real de Let's Encrypt activo, con renovacion automatica
-  (timer `ahhh-certbot-renew`). `www` aun sin registro en DNS: el certificado
-  cubre solo el dominio principal.
-- **Pasarela**: `AHHH_PAYMENT_GATEWAY=disabled` (la recarga online de Tangas
-  muestra "no disponible"; el superadmin ajusta saldo manualmente).
+  (timer `ahhh-certbot-renew`). `www.ahibiza.com` resuelve por CNAME al dominio
+  principal, pero el certificado actual cubre solo `ahibiza.com`: usar el apex
+  en URLs publicas (webhook incluido).
+- **Pasarela**: `AHHH_PAYMENT_GATEWAY=disabled` en el servidor. La integracion
+  con Eupago esta completa en codigo (ver abajo), pero aun no se ha desplegado
+  ni activado: la recarga online muestra "no disponible" y el superadmin ajusta
+  saldo manualmente.
 - **Automatismos activos**: backup diario (DB + media) y cobro diario de Tangas
   de los planes de anuncios.
 - Detalles y redespilegue desde cero: `docs/despliegue.md`.
 
-El ciclo de compra online de Tangas esta implementado con una pasarela simulada (`dummy`) que permite probar de punta a punta sin cobrar. No esta lista para cobrar de verdad: falta elegir una pasarela adulto-friendly, conectar su webhook con firma en HTTPS y cerrar pagos, retencion y auditoria de moderacion.
+## Pasarela de pago (Eupago)
+
+Estado a 2026-10-20; detalle completo en `docs/eupago_integracion.md`.
+
+| Pieza | Estado |
+| --- | --- |
+| Pasarela elegida | Eupago, con visto bueno de la plataforma (fase 0); KYC por confirmar |
+| Adaptador `gateways/eupago.py` (PayByLink) | Implementado y testeado |
+| Webhook 2.0 (POST JSON + HMAC `X-Signature`) | Implementado y testeado |
+| Webhook 1.0 (GET + `chave_api`) | Implementado y testeado; respaldo sin clave de firma |
+| Tests | `EupagoGatewayTest` (34); suite total 136 en verde |
+| API key de produccion | Verificada (`201 Success`): crea checkout real |
+| API key de sandbox | **Falta** (las claves no sirven entre entornos) |
+| Clave de firma del canal (2.0) | **Falta** ("Chave Criptografica"); sin ella, usar 1.0 |
+| Callback en el backoffice | Pendiente: `https://ahibiza.com/pagos/webhook/` (1.0 o 2.0) |
+| Prueba end-to-end | Hecha en local (1.0 y 2.0 acreditan saldo); no en sandbox |
+| Despliegue / activacion | Pendiente (fase 4); produccion sigue en `disabled` |
+
+Lo que la documentacion oficial de Eupago no deja claro y se comprobo a mano:
+hay **una API key por entorno** (solo cambiar la URL no basta), el webhook 2.0
+requiere una clave de firma por canal que no aparece en la guia antigua, y la
+firma documentada en el ejemplo PHP es **base64** (el SDK de terceros dice
+hex). Ademas, la 1.0 solo notifica pagos realizados.
+
+El ciclo de compra online de Tangas esta implementado con una pasarela simulada
+(`dummy`) para desarrollo y con Eupago para produccion. Falta cerrar
+credenciales de sandbox (o decidir probar en produccion con una compra minima
+real), configurar el callback y desplegar.
 
 ## Funcionalidad Estable
 
@@ -50,7 +80,7 @@ El ciclo de compra online de Tangas esta implementado con una pasarela simulada 
 - Eleccion de producto de promocion.
 - Dashboard visual responsive.
 - Vista privada de clientes que marcaron sus anuncios como favoritos.
-- Cartera de Tangas con saldo, movimientos, solicitud y compra online de recarga (pasarela dummy en desarrollo).
+- Cartera de Tangas con saldo, movimientos, solicitud y compra online de recarga (Eupago en produccion cuando se active; `dummy` en desarrollo).
 
 ### Superadmin
 
@@ -83,9 +113,13 @@ El ciclo de compra online de Tangas esta implementado con una pasarela simulada 
 - Compra online de Tangas: orden PENDING, checkout, webhook y acreditacion atomica e idempotente.
 - Control visual de paquetes de Tangas (crear, editar, desactivar) desde el panel.
 - Paquetes, ordenes y logs de webhook tambien registrados en Django Admin.
-- Pasarela aislada tras `BaseGateway` + registry; `dummy` bloqueada en produccion y
-  pasarela `disabled` para produccion sin pasarela real (bloquea la recarga online).
+- Pasarela aislada tras `BaseGateway` + registry; `dummy` bloqueada en produccion,
+  `disabled` para produccion sin pasarela real y `eupago` integrada (PayByLink +
+  webhooks 1.0/2.0, con tests).
 - `AHHH_PAYMENT_MODE` (test/live) validado al arrancar.
+- Scripts de mantenimiento: `maintenance/check_eupago_apikey.py` (validar la key
+  contra cada entorno) y `maintenance/send_test_webhook.py` (ensayar el webhook
+  en local, 1.0 o 2.0).
 - Rutas cliente y profesional auditadas sin fugas a Django.
 - Navegacion compacta en telefono.
 - Barra de contacto fija en detalle para telefono.
@@ -98,14 +132,16 @@ El ciclo de compra online de Tangas esta implementado con una pasarela simulada 
 - `python manage.py check`: correcto.
 - `python manage.py check --deploy` con variables de produccion: correcto.
 - `python manage.py makemigrations --check --dry-run`: sin cambios.
-- `python manage.py test`: 63 tests correctos (filtros, roles, HOT, favoritos, papelera, restauracion, superadmin, recarga online y control de paquetes).
+- `python manage.py test`: 136 tests correctos (filtros, roles, HOT, favoritos, papelera, restauracion, superadmin, recarga online, control de paquetes y pasarela Eupago).
 - Revision responsive en navegador a 360, 768 y 1280 px: sin desbordamiento horizontal.
 - Filtros combinados y resultado de portada comprobados en navegador.
 - Dato temporal de revision visual eliminado al finalizar.
 
 ## Pendiente Prioritario
 
-1. Elegir pasarela de pago real adulto-friendly y conectar su webhook con firma en HTTPS (ver `docs/pagos_pasarela.md`).
+1. Cerrar la pasarela Eupago: conseguir la API key de sandbox (o decidir probar en
+   produccion con una compra minima real), configurar el callback como 1.0 o 2.0
+   y desplegar/activar (`docs/eupago_integracion.md`, fases 3-4).
 2. Dividir la ficha extensa de superadmin en secciones o pestanas.
 3. Revisar visualmente formularios autenticados de perfil y anuncio en telefono real.
 4. Incorporar estados de subida y mensajes de exito/error mas claros.
@@ -115,7 +151,8 @@ El ciclo de compra online de Tangas esta implementado con una pasarela simulada 
 
 ## Decisiones Pendientes
 
-- Pasarela de pago real adulto-friendly y precio final de los paquetes de Tangas.
+- Pasarela de pago elegida (Eupago); queda el KYC, la key de sandbox y el precio final de los paquetes de Tangas.
+- Version de webhook a usar: 2.0 (necesita la clave de firma del canal) o 1.0 (solo pagos realizados).
 - Regla exacta de consumo y renovacion de Tangas.
 - Politica de reembolso de recargas.
 - Periodos de gracia y retencion por impago o inactividad.

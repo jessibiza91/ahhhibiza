@@ -5,7 +5,8 @@ funciona la arquitectura, como se anade una pasarela real nueva y que queda
 pendiente antes de cobrar de verdad.
 
 Ver tambien: `docs/roadmap.md` (fase de pagos), `docs/state_of_play.md`
-(estado actual) y `docs/despliegue.md` (entorno y variables).
+(estado actual), `docs/despliegue.md` (entorno y variables) y
+`docs/eupago_integracion.md` (plan concreto para conectar Eupago).
 
 ## Que es este sistema
 
@@ -92,9 +93,11 @@ Variables en `.env` (ver `.env.example`):
 
 | Variable               | Valores                 | Descripcion                                   |
 | ---------------------- | ----------------------- | --------------------------------------------- |
-| `AHHH_PAYMENT_GATEWAY` | `dummy`, `disabled`, o nueva | Pasarela activa. `dummy` solo en desarrollo; `disabled` en produccion sin pasarela real (bloquea la recarga). |
+| `AHHH_PAYMENT_GATEWAY` | `dummy`, `disabled`, `eupago` | Pasarela activa. `dummy` solo en desarrollo; `disabled` en produccion sin pasarela real (bloquea la recarga). `eupago` es la integrada (ver `docs/eupago_integracion.md`). |
 | `AHHH_PAYMENT_MODE`    | `test`, `live`          | Modo de operacion. Validado al arrancar.      |
-| `AHHH_PUBLIC_BASE_URL` | URL, sin barra final    | Origen publico (ej. `https://www.ahhh-ibiza.com`). Se usa para construir la URL del webhook que configura la pasarela. |
+| `AHHH_PUBLIC_BASE_URL` | URL, sin barra final    | Origen publico (ej. `https://ahibiza.com`). Se usa para construir la URL del webhook que configura la pasarela. |
+| `AHHH_EUPAGO_API_KEY`  | `xxxx-xxxx-xxxx-xxxx-xxxx` | API key del canal de Eupago. **Cada entorno tiene la suya**: la de produccion no sirve en sandbox ni al reves. |
+| `AHHH_EUPAGO_WEBHOOK_SECRET` | texto | Clave de firma del webhook 2.0 (HMAC de `X-Signature`). Si esta vacia se usa el webhook 1.0 (GET), que se valida con `chave_api`. |
 
 - `test` (sandbox): la pasarela opera sin cobrar, para probar.
 - `live`: cobros reales. Al cambiar el modo hay que asegurar que la pasarela
@@ -123,7 +126,8 @@ desde `AHHH_PUBLIC_BASE_URL` (si no esta definido devuelve solo la ruta
 relativa). Es el unico punto de verdad: cuando se conecte una pasarela real,
 basta con leer esa URL y configurarla en el panel de la pasarela. La URL
 resuelve a `views.payment_webhook`, que ya esta preparada para recibir
-notificaciones (csrf_exempt y validacion de firma por pasarela).
+notificaciones (`csrf_exempt`, validacion por pasarela y GET/POST: Eupago usa
+POST firmado en 2.0 y GET con `chave_api` en 1.0).
 
 ## Como anadir una pasarela nueva
 
@@ -156,30 +160,36 @@ su API al contrato de `BaseGateway`.
 
 ## Pendiente antes de cobrar de verdad
 
-1. **Elegir pasarela adulto-friendly.** El proyecto es un directorio adulto;
-   varias pasarelas estandar (Stripe, PayPal) prohiben o restringen este tipo
-   de negocio en sus condiciones de servicio. Hay que confirmar que la pasarela
-   elegida acepta contenido adulto legal y adultos solo en sus terminos.
+1. **Pasarela elegida: Eupago** (adulto-friendly; visto bueno de la plataforma
+   en la fase 0). Integracion en `apps/payments/gateways/eupago.py`, detalle en
+   `docs/eupago_integracion.md`. Queda confirmar el KYC de la cuenta.
 
-2. **HTTPS para el webhook.** Las pasarelas reales exigen que la URL de
-   notificacion este en HTTPS con certificado valido. El despliegue de
-   `docs/despliegue.md` ya plantea nginx + HTTPS; el webhook debe apuntar a la
-   URL publica final (`AHHH_PUBLIC_BASE_URL + /pagos/webhook/`, ver
-   `public_webhook_url()`), no a `localhost`.
+2. **Credenciales.** Hay una API key de **produccion** verificada. Falta la API
+   key de **sandbox** (cada entorno usa la suya) para poder probar sin cobrar,
+   y -solo si se usa el webhook 2.0- la clave de firma del canal
+   ("Chave Criptografica"). Sin ella se puede usar el webhook 1.0.
 
-3. **Firma del webhook.** La pasarela real debe firmar sus notificaciones y
-   `verify_webhook` debe comprobarla (el `dummy` devuelve `True` siempre, solo
-   desarrollo). Con la firma real se puede reforzar tambien la validacion de
-   IPs de origen de la pasarela.
+3. **HTTPS para el webhook.** Resuelto en produccion (`ahibiza.com` con
+   Let's Encrypt); para pruebas locales, un tunel (ngrok/cloudflared). La URL a
+   configurar es `public_webhook_url()` =
+   `https://ahibiza.com/pagos/webhook/`.
 
-4. **Decisiones de negocio pendientes** (del roadmap): politica de reembolso
+4. **Webhook.** Implementados 1.0 (GET, valida `chave_api`) y 2.0 (POST JSON
+   con HMAC SHA-256 en `X-Signature`). Probado end-to-end en local; falta
+   desplegarlo y recibir el primer webhook real de Eupago. La 1.0 solo avisa de
+   pagos realizados (no error/cancelado/expirado).
+
+5. **Decisiones de negocio pendientes** (del roadmap): politica de reembolso
    (el stub `refund_order` no descuenta Tangas ya gastadas), precio final de los
    paquetes, impuestos/facturacion si aplican, y periodo de gracia por impago.
 
 ## Estado
 
-Implementado y verificado (63 tests de la suite completa, incluyendo
-`RechargeFlowTest`): creacion de orden PENDING, checkout dummy, confirmacion
-con acreditacion atomica e idempotente, fallo sin acreditacion, cancelacion,
-gestion visual de paquetes por superadmin y admin de Django para paquetes,
-ordenes y logs. La pasarela real queda pendiente segun el punto anterior.
+Implementado y verificado (**136 tests** de la suite completa, incluyendo
+`RechargeFlowTest` y `EupagoGatewayTest`): creacion de orden PENDING, checkout,
+confirmacion con acreditacion atomica e idempotente, fallo sin acreditacion,
+cancelacion, gestion visual de paquetes por superadmin y admin de Django para
+paquetes, ordenes y logs. Integracion Eupago completa en codigo (PayByLink +
+webhooks 1.0/2.0); en produccion la pasarela sigue en `disabled` hasta la fase
+4 (despliegue, credenciales de sandbox, configuracion del callback y compra
+real minima).

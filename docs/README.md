@@ -12,6 +12,7 @@ lees un solo documento**. No hace falta leer mas.
 | Conocer la vision y las fases         | `docs/roadmap.md`                                          |
 | Ver que tareas hay pendientes         | `docs/todo.md`                                             |
 | Integrar la pasarela de pago          | `docs/pagos_pasarela.md`                                   |
+| Integrar Eupago (plan concreto)       | `docs/eupago_integracion.md`                               |
 | Reglas al contribuir al codigo        | `docs/handover_report.md`                                  |
 | Estandares de UI/UX                   | `docs/blueprint.md`                                        |
 | Experiencia ideal por rol (UX)        | `docs/ux_user_journeys.md`                                 |

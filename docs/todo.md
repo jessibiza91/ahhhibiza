@@ -44,6 +44,7 @@ Notas historicas: `docs/archivo/`.
 - [x] Backup automatico de la base de datos (pg_dump comprimido + rotacion + subida opcional a Backblaze B2 via rclone) y copias DB+media con timer systemd.
 - [x] Consumo diario de Tangas de los planes de anuncios con timer systemd (degradacion a plan basico, idempotente por anuncio y dia).
 - [x] Despliegue de produccion en `ahibiza.com`: Docker Compose + nginx HTTPS con certificado real de Let's Encrypt y renovacion automatica (temporal autofirmado para arranque y despliegue por IP sin HTTPS documentados en `docs/despliegue.md`).
+- [x] Integracion Eupago en codigo: PayByLink v1.02, webhooks 1.0 y 2.0, `EupagoGatewayTest` (34 tests) y suite total de 136 en verde; scripts `maintenance/check_eupago_apikey.py` y `maintenance/send_test_webhook.py`.
 
 ## Ahora - Fase 1: Estabilizacion Tecnica
 
@@ -87,8 +88,11 @@ Notas historicas: `docs/archivo/`.
 - [x] Compra online de Tangas con pasarela simulada (dummy) para desarrollo.
 - [x] Estados de orden de recarga: PENDING, PAID, FAILED, CANCELLED, REFUNDED.
 - [x] Acreditacion de saldo atomica e idempotente con `select_for_update`.
-- [ ] Elegir pasarela real adulto-friendly y conectarla al contrato `BaseGateway`.
-- [ ] Firmar y validar webhook real + URL HTTPS publica para notificaciones.
+- [x] Elegir pasarela real adulto-friendly y conectarla al contrato `BaseGateway` (Eupago: PayByLink + webhooks 1.0/2.0, `apps/payments/gateways/eupago.py`).
+- [x] Validar y firmar webhooks en codigo: 2.0 (POST + HMAC `X-Signature` base64) y 1.0 (GET + `chave_api`), con URL publica HTTPS (`docs/eupago_integracion.md`).
+- [ ] Conseguir la API key de sandbox de Eupago (o decidir probar en produccion con una compra minima real) y configurar el callback en el canal.
+- [ ] Desplegar y activar Eupago en produccion (`AHHH_PAYMENT_GATEWAY=eupago`, `AHHH_PAYMENT_MODE=live`, `AHHH_PUBLIC_BASE_URL=https://ahibiza.com`).
+- [ ] Confirmar KYC/verificacion de la cuenta Eupago y aceptacion de contenido adulto.
 - [ ] Definir modelo de suscripcion profesional.
 - [ ] Guardar ultima actividad real del profesional.
 - [ ] Implementar estados de pago de profesional: activo, impagado, gracia, suspendido, eliminado.

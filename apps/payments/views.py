@@ -7,7 +7,7 @@ from django.db.models import Count
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django_ratelimit.decorators import ratelimit
 
 from apps.accounts.models import CustomUser
@@ -83,11 +83,12 @@ def dummy_checkout(request, order_id):
 
 
 @csrf_exempt
-@require_POST
+@require_http_methods(['GET', 'POST'])
 def payment_webhook(request):
     """Recibe notificaciones de la pasarela y acredita o falla el pago.
 
-    La autenticidad se valida con la pasarela activa (firma en las reales).
+    Acepta GET (webhook 1.0 de Eupago: parametros en la URL) y POST (webhook
+    2.0: JSON firmado). La autenticidad se valida con la pasarela activa.
     Las pasarelas reales no envian CSRF, por eso la vista es csrf_exempt.
     """
     gateway = get_active_gateway()

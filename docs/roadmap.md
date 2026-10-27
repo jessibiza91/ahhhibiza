@@ -38,7 +38,7 @@ El proyecto ya contiene:
 - Anuncios con descripcion publica, descripcion HOT, tags de servicios, promocion interna en Tangas y galeria publica/privada.
 - Panel cliente registrado con favoritas y perfiles activos.
 - Dashboard profesional basico.
-- Compra online de Tangas con pasarela simulada (dummy) y webhook idempotente.
+- Compra online de Tangas con webhook idempotente (pasarela simulada `dummy` en desarrollo; Eupago integrada en codigo para produccion).
 - Age gate y estilo visual base.
 - Backups y lanzadores operativos.
 
@@ -51,7 +51,7 @@ Problemas detectados antes del lanzamiento y estado actual:
 - Corregido: se retiro la logica temporal para un usuario concreto.
 - Corregido: settings configurables por entorno, zona horaria local y protecciones HTTPS al desactivar `DEBUG`.
 - Corregido: filtros de portada por texto y zona; se retiro el selector de categoria.
-- Implementado: recarga online de Tangas con pasarela simulada (dummy); queda conectar una pasarela real adulto-friendly con webhook HTTPS firmado.
+- Implementado: recarga online de Tangas y pasarela Eupago (PayByLink + webhooks 1.0/2.0) en codigo; quedan la key de sandbox, el callback en el backoffice y el despliegue/activacion.
 - Validado: contratos autenticados criticos cubiertos por tests; queda revision visual de formularios con sesion.
 
 ## Fase 1 - Estabilizacion Tecnica
@@ -101,24 +101,27 @@ Objetivo: controlar el uso de almacenamiento y liberar espacio de manera automat
 
 Los Tangas son saldo interno del profesional. No son un precio publico, no aparecen en fichas ni detalles para clientes, y sirven para recargar la cuenta profesional, renovar anuncios y consumir promocion/prioridad dentro de la plataforma.
 
-### Compra online de Tangas (implementada, con pasarela simulada)
+### Compra online de Tangas (implementada; pasarela Eupago en codigo)
 
-El flujo de compra esta construido y probado, pero con la pasarela `dummy`
-(desarrollo) o `disabled` (produccion sin pasarela real, que bloquea la
-recarga online con un mensaje claro): solo cobra de verdad cuando se conecte
-una pasarela real.
+El flujo de compra esta construido y probado. La pasarela real elegida es
+**Eupago** y ya esta integrada en codigo (PayByLink + webhooks 1.0/2.0), pero
+en produccion sigue `disabled` hasta cerrar credenciales y desplegar: solo
+cobra de verdad cuando se active.
 
 - Los profesionales eligen un paquete en su cartera y se crea una orden PENDING.
 - La pasarela (via contrato `BaseGateway`) devuelve una URL de pago.
-- El webhook `/pagos/webhook/` verifica firma, importe y moneda, y acredita el
-  saldo de forma atomica e idempotente (con `select_for_update`).
+- El webhook `/pagos/webhook/` verifica autenticidad (firma HMAC en 2.0, o
+  `chave_api` en 1.0), importe y moneda, y acredita el saldo de forma atomica e
+  idempotente (con `select_for_update`).
 - Superadmin gestiona los paquetes (crear, editar, desactivar) desde el panel y
   desde Django Admin; ordenes y logs de webhook quedan registrados.
-- `AHHH_PAYMENT_GATEWAY` (dummy/disabled) y `AHHH_PAYMENT_MODE` (test/live) se
-  configuran por entorno. `dummy` esta bloqueada en produccion.
+- `AHHH_PAYMENT_GATEWAY` (dummy/disabled/eupago) y `AHHH_PAYMENT_MODE`
+  (test/live) se configuran por entorno. `dummy` esta bloqueada en produccion.
 
-Pendiente: elegir una pasarela adulto-friendly y conectar su webhook con firma
-en HTTPS. Detalle completo en `docs/pagos_pasarela.md`.
+Pendiente: API key de sandbox de Eupago (o decision de probar en produccion con
+una compra minima), configurar el callback como 1.0 o 2.0, desplegar y
+confirmar el KYC. Detalle completo en `docs/eupago_integracion.md` y
+`docs/pagos_pasarela.md`.
 
 ### Politica de Profesionales Inactivos
 
@@ -187,7 +190,7 @@ Objetivo: poder desplegar con seguridad.
 
 Antes de lanzar, hay que decidir:
 
-- Pasarela de pago real (adulto-friendly) y precio final de los paquetes de Tangas.
+- Precio final de los paquetes de Tangas (la pasarela ya elegida es Eupago; falta la key de sandbox, el KYC y desplegarla).
 - Periodo exacto de gracia para profesionales impagados.
 - Si se elimina la cuenta completa o solo media/anuncios tras impago.
 - Cuota inicial por profesional.

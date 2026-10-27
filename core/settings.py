@@ -133,6 +133,13 @@ if AHHH_PAYMENT_MODE not in {'test', 'live'}:
 # puede dejarse vacio; en produccion debe apuntar al dominio final con HTTPS.
 AHHH_PUBLIC_BASE_URL = os.getenv('AHHH_PUBLIC_BASE_URL', '').rstrip('/')
 
+# Claves de la pasarela Eupago (ver apps/payments/gateways/eupago.py).
+# Se exigen en runtime al usar AHHH_PAYMENT_GATEWAY=eupago: sin la API key no
+# se puede crear checkout y sin el webhook secret todos los webhooks se
+# rechazan. Van solo en el .env, nunca en el repositorio.
+AHHH_EUPAGO_API_KEY = os.getenv('AHHH_EUPAGO_API_KEY', '')
+AHHH_EUPAGO_WEBHOOK_SECRET = os.getenv('AHHH_EUPAGO_WEBHOOK_SECRET', '')
+
 # Correo (SMTP). Sin AHHH_EMAIL_HOST se usa el backend de consola: los correos
 # (p. ej. recuperacion de contrasena) se imprimen en el servidor/terminal, util
 # en desarrollo. En produccion hay que configurar un proveedor SMTP real.
