@@ -36,8 +36,8 @@ La doc de Eupago no cubre todo; esto se verifico a mano (oct. 2026):
 | ---- | ----------- | -------- |
 | API key | "solo cambia `sandbox` por `clientes`" | Hay **clave por entorno**: la de produccion da `401 APIKEY_INVALID` en sandbox; la de pruebas tambien falla en produccion |
 | Callback | Guia: marcar casilla + pegar URL | Solo para recibir. Para **validar** el webhook 2.0 hace falta la clave del canal (Webhooks 2.0 panel); la 1.0 no la necesita (valida `chave_api`) |
-| `X-Signature` | Ejemplo PHP: HMAC SHA-256 **base64** | El SDK de terceros dice **hex**; implementamos base64 (como el PHP y pretix). Pendiente confirmar con un webhook real |
-| Payload 2.0 | `transactions` (plural) | pretix (integracion real) dice que llega `transaction` (singular). Nuestro parser espera plural; verificar en fase 3 |
+| `X-Signature` | Ejemplo PHP: HMAC SHA-256 **base64** | **Confirmado en fase 3**: Eupago firma en **base64** sobre el body exacto; con la clave del canal el HMAC coincide |
+| Payload 2.0 | `transactions` (plural) | **Confirmado en fase 3**: el aviso real trae `transaction` (**singular**) con `channel` aparte. El parser acepta singular, plural y lista para no depender del formato |
 | URL de pago | Dos familias coexisten | Legacy "Body Auth" (`/clientes/rest_api/<metodo>/create`, key en el body) **no tiene PayByLink**; usamos "ApiKey Auth" (`/api/v1.02/paybylink/create`, key en header), verificado con `201 Success` |
 | Webhook 1.0 | GET con params; incluye `chave_api` | Solo avisa de pagos realizados (no error/cancelado/expirado); sin HMAC; la key viaja en la URL (queda en logs/proxies) |
 
@@ -147,8 +147,10 @@ checkout (lanzar excepcion; `recharge_start` ya muestra mensaje de error).
   hmac.compare_digest(expected, signature.encode())
   ```
 
-- Body: `{"transactions": {...}, "channel": {...}}`. Campos utiles de
-  `transactions`:
+- Body: `{"transaction": {...}, "channel": {...}}` (verificado; la doc y el
+  ejemplo PHP dicen `transactions` en plural). El parser localiza el bloque
+  con `_extract_transaction`, que acepta `transaction`/`transactions` como
+  objeto o como lista. Campos utiles:
 
   | Campo | Tipo | Uso en el proyecto |
   | ----- | ---- | ------------------- |
@@ -159,7 +161,8 @@ checkout (lanzar excepcion; `recharge_start` ya muestra mensaje de error).
   | `method` | string | Multibanco/Mbway/CreditCard/... (informativo) |
 
   **Ojo:** el webhook **no** incluye `transactionID` (el hex que devuelve el
-  create). Por eso la referencia que viaja de ida y vuelta es `identifier`.
+  create; en el aviso real aparece dentro de `transaction` pero no se usa).
+  Por eso la referencia que viaja de ida y vuelta es `identifier`.
 
 - Respuesta: debe devolver **HTTP 200** si no se quiere que Eupago reintente
   (reintentos: cada 2 min x3, luego cada hora durante 24 h). La vista
@@ -242,7 +245,8 @@ checkout (lanzar excepcion; `recharge_start` ya muestra mensaje de error).
           `request.body` con `AHHH_EUPAGO_WEBHOOK_SECRET` y comparar con
           `hmac.compare_digest` (ver snippet arriba). `False` si falta alguno.
       - `parse_event(request)`:
-        - `json.loads(request.body)`; extraer `transactions`.
+        - `json.loads(request.body)`; localizar el bloque de transaccion
+          (`transaction` o `transactions`, objeto o lista).
         - mapear estado segun la tabla de decisiones.
         - devolver `{'event_type', 'gateway_order_id': identifier,
           'amount': amount['value'], 'currency': amount['currency'],
@@ -258,8 +262,10 @@ checkout (lanzar excepcion; `recharge_start` ya muestra mensaje de error).
         o `transactionStatus != 'Success'` => `ValueError` con mensaje amable
         (que `recharge_start` muestra al usuario) y el detalle tecnico en el
         log. El `transactionID` del create se registra con `logger.info`.
-      - `parse_event` exige `transactions.identifier` + `status` mapeable y, en
-        `Paid`, tambien `amount` (para no saltarse la validacion de importe de
+      - `parse_event` localiza el bloque con `_extract_transaction` (acepta
+        `transaction` singular -lo que envia Eupago-, `transactions` plural y
+        lista), exige `identifier` + `status` mapeable y, en `Paid`, tambien
+        `amount` (para no saltarse la validacion de importe de
         `confirm_payment`); el resto de statuses recibidos con importe se
         pasan tal cual. Cualquier payload inesperado => excepcion (400).
       - Verificado con smoke manual de los tres metodos + `manage.py check` +

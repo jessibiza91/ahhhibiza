@@ -89,6 +89,7 @@ class ControlTangasPackagesTest(TestCase):
         self.assertEqual(resp.status_code, 302)
 
 
+@override_settings(AHHH_PAYMENT_GATEWAY='dummy')
 class RechargeFlowTest(TestCase):
     def setUp(self):
         self.professional = CustomUser.objects.create_user(
@@ -509,6 +510,31 @@ class EupagoGatewayTest(TestCase):
                 with self.assertRaises(ValueError):
                     EupagoGateway().parse_event(self._webhook_request(body))
 
+    def test_parse_event_accepts_singular_transaction(self):
+        body = json.dumps({
+            'channel': {'account': 'demo-sem nome', 'name': 'test_pago'},
+            'transaction': {
+                'identifier': 'recharge-abc',
+                'status': 'Paid',
+                'method': 'PC:PT',
+                'amount': {'value': '15.00000', 'currency': 'EUR'},
+                'trid': '29755352',
+            },
+        }).encode('utf-8')
+        event = EupagoGateway().parse_event(self._webhook_request(body))
+        self.assertEqual(event['event_type'], 'payment.succeeded')
+        self.assertEqual(event['gateway_order_id'], 'recharge-abc')
+        self.assertEqual(event['amount'], '15.00000')
+        self.assertEqual(event['currency'], 'EUR')
+        self.assertEqual(event['raw']['transaction']['status'], 'Paid')
+
+    def test_parse_event_accepts_transactions_list(self):
+        payload = self._payload()
+        body = json.dumps({'transactions': [payload['transactions']]}).encode('utf-8')
+        event = EupagoGateway().parse_event(self._webhook_request(body))
+        self.assertEqual(event['event_type'], 'payment.succeeded')
+        self.assertEqual(event['gateway_order_id'], 'recharge-abc')
+
     def test_parse_event_rejects_invalid_json(self):
         with self.assertRaises(ValueError):
             EupagoGateway().parse_event(self._webhook_request(b'no-es-json'))
@@ -529,6 +555,30 @@ class EupagoGatewayTest(TestCase):
         self.professional.refresh_from_db()
         self.assertEqual(self.professional.tangas_balance, self.package.tangas_amount)
         self.assertEqual(Transaction.objects.filter(recharge_order=order).count(), 1)
+
+    def test_webhook_paid_with_singular_transaction_credits(self):
+        order = self._create_pending_order()
+        body = json.dumps({
+            'channel': {'account': 'demo-sem nome', 'name': 'test_pago'},
+            'transaction': {
+                'identifier': order.gateway_order_id,
+                'status': 'Paid',
+                'method': 'PC:PT',
+                'amount': {'value': '15.00000', 'currency': 'EUR'},
+                'trid': '29755352',
+            },
+        }).encode('utf-8')
+        resp = self.client.post(
+            reverse('payments:payment_webhook'),
+            data=body,
+            content_type='application/json',
+            HTTP_X_SIGNATURE=self._sign(body),
+        )
+        self.assertEqual(resp.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, RechargeOrder.Status.PAID)
+        self.professional.refresh_from_db()
+        self.assertEqual(self.professional.tangas_balance, self.package.tangas_amount)
 
     def test_webhook_invalid_signature_rejected(self):
         order = self._create_pending_order()

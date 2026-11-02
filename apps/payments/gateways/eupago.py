@@ -36,6 +36,25 @@ def _absolute_url(path):
     return f'{base}{path}' if base else path
 
 
+def _extract_transaction(body):
+    """Localiza el bloque de la transaccion en el aviso 2.0.
+
+    El aviso real de Eupago envia `transaction` en singular (verificado con
+    el backoffice), aunque la documentacion y el ejemplo PHP muestran
+    `transactions`. Se aceptan ambas formas, como objeto o como lista de un
+    elemento, para no depender del formato exacto.
+    """
+    if not isinstance(body, dict):
+        return None
+    for key in ('transaction', 'transactions'):
+        value = body.get(key)
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, list) and value and isinstance(value[0], dict):
+            return value[0]
+    return None
+
+
 class EupagoGateway(BaseGateway):
     """Pasarela Eupago (eupago.pt) integrada via Pay By Link.
 
@@ -59,7 +78,8 @@ class EupagoGateway(BaseGateway):
 
     La referencia que viaja de ida y vuelta es `payment.identifier`
     (f'recharge-<hex>'): se guarda en RechargeOrder.gateway_order_id y Eupago
-    la devuelve en `transactions.identifier` (2.0) o `identificador` (1.0).
+    la devuelve en `transaction.identifier` (2.0, o `transactions` segun la
+    documentacion) o `identificador` (1.0).
     """
 
     name = 'eupago'
@@ -191,18 +211,18 @@ class EupagoGateway(BaseGateway):
         except ValueError as exc:
             raise ValueError('Webhook de Eupago sin JSON válido.') from exc
 
-        transactions = body.get('transactions')
-        if not isinstance(transactions, dict):
-            raise ValueError('Webhook de Eupago sin bloque "transactions".')
+        transaction = _extract_transaction(body)
+        if transaction is None:
+            raise ValueError('Webhook de Eupago sin bloque "transaction".')
 
-        identifier = transactions.get('identifier')
-        status = transactions.get('status')
+        identifier = transaction.get('identifier')
+        status = transaction.get('status')
         if not identifier or status not in _STATUS_EVENTS:
             raise ValueError(
                 f'Webhook de Eupago con estructura inesperada: status={status!r}.'
             )
 
-        amount = transactions.get('amount')
+        amount = transaction.get('amount')
         amount_value = amount.get('value') if isinstance(amount, dict) else None
         amount_currency = amount.get('currency') if isinstance(amount, dict) else None
 
@@ -212,7 +232,7 @@ class EupagoGateway(BaseGateway):
 
         logger.info(
             'Webhook Eupago %s (orden externa %s, trid=%s, método=%s)',
-            status, identifier, transactions.get('trid'), transactions.get('method'),
+            status, identifier, transaction.get('trid'), transaction.get('method'),
         )
         return {
             'event_type': event_type,

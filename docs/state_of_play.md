@@ -33,27 +33,28 @@ El sitio esta publicado en produccion:
 
 ## Pasarela de pago (Eupago)
 
-Estado a 2026-10-20; detalle completo en `docs/eupago_integracion.md`.
+Estado a 2026-11-02; detalle completo en `docs/eupago_integracion.md`.
 
 | Pieza | Estado |
 | --- | --- |
 | Pasarela elegida | Eupago, con visto bueno de la plataforma (fase 0); KYC por confirmar |
 | Adaptador `gateways/eupago.py` (PayByLink) | Implementado y testeado |
-| Webhook 2.0 (POST JSON + HMAC `X-Signature`) | Implementado y testeado |
-| Webhook 1.0 (GET + `chave_api`) | Implementado y testeado; respaldo sin clave de firma |
-| Tests | `EupagoGatewayTest` (34); suite total 136 en verde |
+| Webhook 2.0 (POST JSON + HMAC `X-Signature` base64) | Implementado y **verificado con aviso real** (payload `transaction` singular) |
+| Webhook 1.0 (GET + `chave_api`) | Implementado y **verificado con aviso real**; respaldo sin clave de firma |
+| Tests | `EupagoGatewayTest` (37); suite total 139 en verde |
 | API key de produccion | Verificada (`201 Success`): crea checkout real |
-| API key de sandbox | **Falta** (las claves no sirven entre entornos) |
-| Clave de firma del canal (2.0) | **Falta** ("Chave Criptografica"); sin ella, usar 1.0 |
-| Callback en el backoffice | Pendiente: `https://ahibiza.com/pagos/webhook/` (1.0 o 2.0) |
-| Prueba end-to-end | Hecha en local (1.0 y 2.0 acreditan saldo); no en sandbox |
+| API key de sandbox | Disponible (key demo): checkout y webhooks probados |
+| Clave de firma del canal (2.0) | Disponible; firma base64 confirmada |
+| Callback en el backoffice | Sandbox configurado; produccion pendiente: `https://ahibiza.com/pagos/webhook/` |
+| Prueba end-to-end | Hecha en sandbox por ngrok: Eupago notifica, la orden pasa a PAID y acredita saldo |
 | Despliegue / activacion | Pendiente (fase 4); produccion sigue en `disabled` |
 
 Lo que la documentacion oficial de Eupago no deja claro y se comprobo a mano:
 hay **una API key por entorno** (solo cambiar la URL no basta), el webhook 2.0
-requiere una clave de firma por canal que no aparece en la guia antigua, y la
-firma documentada en el ejemplo PHP es **base64** (el SDK de terceros dice
-hex). Ademas, la 1.0 solo notifica pagos realizados.
+requiere una clave de firma por canal que no aparece en la guia antigua, la
+firma es **base64** (el SDK de terceros dice hex) y el aviso 2.0 real trae
+`transaction` en **singular** (la doc dice `transactions`). Ademas, la 1.0 solo
+notifica pagos realizados.
 
 El ciclo de compra online de Tangas esta implementado con una pasarela simulada
 (`dummy`) para desarrollo y con Eupago para produccion. Falta cerrar
