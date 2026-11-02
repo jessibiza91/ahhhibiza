@@ -130,6 +130,9 @@ def payment_webhook(request):
                 order,
                 paid_amount=event.get('amount'),
                 paid_currency=event.get('currency'),
+                gateway_reference=event.get('gateway_reference'),
+                gateway_entity=event.get('gateway_entity'),
+                gateway_transaction_id=event.get('gateway_transaction_id'),
             )
         elif event_type == 'payment.failed':
             services.fail_payment(order, reason=str(event.get('raw', {})))

@@ -182,6 +182,32 @@ class RechargeFlowTest(TestCase):
         self.assertEqual(tx.amount, self.package.tangas_amount)
         self.assertEqual(tx.user, self.professional)
 
+    def test_confirm_payment_persists_gateway_payment_data(self):
+        order = self._create_pending_order()
+        updated, credited = services.confirm_payment(
+            order,
+            paid_amount=order.amount_eur,
+            paid_currency='EUR',
+            gateway_reference='104220327',
+            gateway_entity='82142',
+            gateway_transaction_id='29755358',
+        )
+        self.assertTrue(credited)
+        updated.refresh_from_db()
+        self.assertEqual(updated.gateway_reference, '104220327')
+        self.assertEqual(updated.gateway_entity, '82142')
+        self.assertEqual(updated.gateway_transaction_id, '29755358')
+
+    def test_confirm_payment_without_gateway_data_leaves_fields_empty(self):
+        order = self._create_pending_order()
+        updated, _ = services.confirm_payment(
+            order, paid_amount=order.amount_eur, paid_currency='EUR',
+        )
+        updated.refresh_from_db()
+        self.assertEqual(updated.gateway_reference, '')
+        self.assertEqual(updated.gateway_entity, '')
+        self.assertEqual(updated.gateway_transaction_id, '')
+
     def test_confirm_payment_is_idempotent(self):
         order = self._create_pending_order()
         _, credited_first = services.confirm_payment(
@@ -338,6 +364,8 @@ class EupagoGatewayTest(TestCase):
             'status': status,
             'trid': 42,
             'method': 'Multibanco',
+            'reference': '104220327',
+            'entity': '82142',
         }
         if amount is not None:
             transaction['amount'] = {'value': float(amount), 'currency': currency}
@@ -482,6 +510,9 @@ class EupagoGatewayTest(TestCase):
         self.assertEqual(event['gateway_order_id'], 'recharge-abc')
         self.assertEqual(event['amount'], 15.0)
         self.assertEqual(event['currency'], 'EUR')
+        self.assertEqual(event['gateway_reference'], '104220327')
+        self.assertEqual(event['gateway_entity'], '82142')
+        self.assertEqual(event['gateway_transaction_id'], '42')
         self.assertEqual(event['raw']['transactions']['status'], 'Paid')
 
     def test_parse_event_failure_statuses(self):
@@ -519,6 +550,8 @@ class EupagoGatewayTest(TestCase):
                 'method': 'PC:PT',
                 'amount': {'value': '15.00000', 'currency': 'EUR'},
                 'trid': '29755352',
+                'reference': '104220327',
+                'entity': '82142',
             },
         }).encode('utf-8')
         event = EupagoGateway().parse_event(self._webhook_request(body))
@@ -526,6 +559,9 @@ class EupagoGatewayTest(TestCase):
         self.assertEqual(event['gateway_order_id'], 'recharge-abc')
         self.assertEqual(event['amount'], '15.00000')
         self.assertEqual(event['currency'], 'EUR')
+        self.assertEqual(event['gateway_reference'], '104220327')
+        self.assertEqual(event['gateway_entity'], '82142')
+        self.assertEqual(event['gateway_transaction_id'], '29755352')
         self.assertEqual(event['raw']['transaction']['status'], 'Paid')
 
     def test_parse_event_accepts_transactions_list(self):
@@ -552,6 +588,9 @@ class EupagoGatewayTest(TestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, RechargeOrder.Status.PAID)
         self.assertTrue(order.gateway_order_id.startswith('recharge-'))
+        self.assertEqual(order.gateway_reference, '104220327')
+        self.assertEqual(order.gateway_entity, '82142')
+        self.assertEqual(order.gateway_transaction_id, '42')
         self.professional.refresh_from_db()
         self.assertEqual(self.professional.tangas_balance, self.package.tangas_amount)
         self.assertEqual(Transaction.objects.filter(recharge_order=order).count(), 1)
@@ -566,6 +605,8 @@ class EupagoGatewayTest(TestCase):
                 'method': 'PC:PT',
                 'amount': {'value': '15.00000', 'currency': 'EUR'},
                 'trid': '29755352',
+                'reference': '104220327',
+                'entity': '82142',
             },
         }).encode('utf-8')
         resp = self.client.post(
@@ -577,6 +618,9 @@ class EupagoGatewayTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         order.refresh_from_db()
         self.assertEqual(order.status, RechargeOrder.Status.PAID)
+        self.assertEqual(order.gateway_reference, '104220327')
+        self.assertEqual(order.gateway_entity, '82142')
+        self.assertEqual(order.gateway_transaction_id, '29755352')
         self.professional.refresh_from_db()
         self.assertEqual(self.professional.tangas_balance, self.package.tangas_amount)
 
@@ -670,6 +714,9 @@ class EupagoGatewayTest(TestCase):
         self.assertEqual(event['gateway_order_id'], 'recharge-abc')
         self.assertEqual(event['amount'], Decimal('15.00'))
         self.assertEqual(event['currency'], 'EUR')
+        self.assertEqual(event['gateway_reference'], '102087857')
+        self.assertEqual(event['gateway_entity'], '82307')
+        self.assertEqual(event['gateway_transaction_id'], '10409241')
         self.assertEqual(event['raw']['transacao'], '10409241')
 
     def test_parse_event_legacy_accepts_comma_decimal(self):
@@ -705,6 +752,9 @@ class EupagoGatewayTest(TestCase):
 
         order.refresh_from_db()
         self.assertEqual(order.status, RechargeOrder.Status.PAID)
+        self.assertEqual(order.gateway_reference, '102087857')
+        self.assertEqual(order.gateway_entity, '82307')
+        self.assertEqual(order.gateway_transaction_id, '10409241')
         self.professional.refresh_from_db()
         self.assertEqual(self.professional.tangas_balance, self.package.tangas_amount)
         self.assertEqual(Transaction.objects.filter(recharge_order=order).count(), 1)

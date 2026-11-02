@@ -41,7 +41,8 @@ Estado a 2026-11-02; detalle completo en `docs/eupago_integracion.md`.
 | Adaptador `gateways/eupago.py` (PayByLink) | Implementado y testeado |
 | Webhook 2.0 (POST JSON + HMAC `X-Signature` base64) | Implementado y **verificado con aviso real** (payload `transaction` singular) |
 | Webhook 1.0 (GET + `chave_api`) | Implementado y **verificado con aviso real**; respaldo sin clave de firma |
-| Tests | `EupagoGatewayTest` (37); suite total 139 en verde |
+| Datos del cobro | `gateway_reference`, `gateway_entity` y `gateway_transaction_id` guardados en la orden y visibles en el admin |
+| Tests | `EupagoGatewayTest` (37); suite total 141 en verde |
 | API key de produccion | Verificada (`201 Success`): crea checkout real |
 | API key de sandbox | Disponible (key demo): checkout y webhooks probados |
 | Clave de firma del canal (2.0) | Disponible; firma base64 confirmada |

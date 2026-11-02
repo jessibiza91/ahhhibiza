@@ -157,8 +157,10 @@ checkout (lanzar excepcion; `recharge_start` ya muestra mensaje de error).
   | `identifier` | string | **Lo que nosotros enviamos al crear** => es el `gateway_order_id` para localizar la orden |
   | `status` | string | `Paid`, `Refund`, `Error`, `Cancel`, `Expired` |
   | `amount` | object | `{value, currency}` => se pasa a `confirm_payment` como validacion |
-  | `trid` | integer | ID interno de Eupago (informativo, va al log) |
-  | `method` | string | Multibanco/Mbway/CreditCard/... (informativo) |
+  | `reference` | string | Referencia de pago (Multibanco) => `RechargeOrder.gateway_reference` |
+  | `entity` | string | Entidad de pago (Multibanco) => `RechargeOrder.gateway_entity` |
+  | `trid` | integer | ID interno del cobro => `RechargeOrder.gateway_transaction_id` |
+  | `method` | string | Multibanco/Mbway/CreditCard/... (informativo, solo en `WebhookLog`) |
 
   **Ojo:** el webhook **no** incluye `transactionID` (el hex que devuelve el
   create; en el aviso real aparece dentro de `transaction` pero no se usa).
@@ -268,6 +270,12 @@ checkout (lanzar excepcion; `recharge_start` ya muestra mensaje de error).
         `amount` (para no saltarse la validacion de importe de
         `confirm_payment`); el resto de statuses recibidos con importe se
         pasan tal cual. Cualquier payload inesperado => excepcion (400).
+      - Los datos utiles del cobro se guardan en la orden, no solo en el log:
+        `gateway_reference` (`reference` en 2.0 / `referencia` en 1.0),
+        `gateway_entity` (`entity` / `entidade`) y `gateway_transaction_id`
+        (`trid` / `transacao`). `confirm_payment` solo los escribe si llegan
+        con valor, asi que las pasarelas que no los envian dejan la orden con
+        esos campos vacios.
       - Verificado con smoke manual de los tres metodos + `manage.py check` +
         suite completa en verde (102 tests). Los tests formales quedan para la
         fase 2.

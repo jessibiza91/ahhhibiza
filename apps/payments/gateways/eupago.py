@@ -202,6 +202,9 @@ class EupagoGateway(BaseGateway):
             'gateway_order_id': identifier,
             'amount': amount,
             'currency': 'EUR',
+            'gateway_reference': (params.get('referencia') or '').strip(),
+            'gateway_entity': (params.get('entidade') or '').strip(),
+            'gateway_transaction_id': (params.get('transacao') or '').strip(),
             'raw': params.dict(),
         }
 
@@ -239,5 +242,8 @@ class EupagoGateway(BaseGateway):
             'gateway_order_id': identifier,
             'amount': amount_value,
             'currency': amount_currency,
+            'gateway_reference': str(transaction.get('reference') or '').strip(),
+            'gateway_entity': str(transaction.get('entity') or '').strip(),
+            'gateway_transaction_id': str(transaction.get('trid') or '').strip(),
             'raw': body,
         }

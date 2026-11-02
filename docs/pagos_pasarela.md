@@ -17,7 +17,10 @@ la pasarela confirma el cobro.
 - `TangasPackage`: paquetes que se compran (ej: 50 T por 15 EUR). Son el "precio
   de entrada" del dinero.
 - `RechargeOrder`: una orden de recarga. Se crea PENDING, pasa a PAID cuando la
-  pasarela confirma el pago, o a FAILED/CANCELLED.
+  pasarela confirma el pago, o a FAILED/CANCELLED. Guarda tambien los datos del
+  cobro que envia la pasarela (`gateway_reference`, `gateway_entity` y
+  `gateway_transaction_id`) para poder localizar el pago o tramitar un
+  reembolso; si la pasarela no los envia, quedan vacios.
 - `Transaction`: registro contable del movimiento de saldo. Cada recarga pagada
   crea una transaccion enlazada a su orden.
 - `PromotionProduct`: gasto de Tangas dentro de la plataforma (promocionar
@@ -137,7 +140,9 @@ POST firmado en 2.0 y GET con `chave_api` en 1.0).
    - `create_checkout(order)` -> `{'checkout_url': str, 'gateway_order_id': str}`
    - `verify_webhook(request)` -> `bool` (valida la firma del payload)
    - `parse_event(request)` -> `{'event_type': 'payment.succeeded'|'payment.failed',
-     'gateway_order_id': str, 'raw': dict, 'amount': opcional, 'currency': opcional}`
+     'gateway_order_id': str, 'raw': dict, 'amount': opcional, 'currency': opcional,
+     'gateway_reference': opcional, 'gateway_entity': opcional,
+     'gateway_transaction_id': opcional}`
 
 2. Registrar la clase en `_GATEWAYS` de `gateways/registry.py`, por ejemplo:
    `'stripe': StripeGateway`.

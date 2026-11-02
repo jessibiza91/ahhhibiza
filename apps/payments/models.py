@@ -70,6 +70,37 @@ class RechargeOrder(models.Model):
         db_index=True,
         verbose_name=_('Referencia externa'),
     )
+    gateway_reference = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        verbose_name=_('Referencia de pago'),
+        help_text=_(
+            'Número de referencia que se le muestra al cliente para pagar '
+            '(por ejemplo, la referencia Multibanco). Lo rellena la pasarela '
+            'automáticamente.'
+        ),
+    )
+    gateway_entity = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        verbose_name=_('Entidad de pago'),
+        help_text=_(
+            'Código de la entidad de pago (por ejemplo, la entidad Multibanco). '
+            'Es solo informativo.'
+        ),
+    )
+    gateway_transaction_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        verbose_name=_('ID de transacción de la pasarela'),
+        help_text=_(
+            'Identificador interno del cobro en la pasarela. Sirve para '
+            'localizar un pago o tramitar un reembolso con soporte.'
+        ),
+    )
     error_message = models.TextField(blank=True, verbose_name=_('Mensaje de error'))
     created_at = models.DateTimeField(auto_now_add=True)
     paid_at = models.DateTimeField(null=True, blank=True, verbose_name=_('Pagada en'))

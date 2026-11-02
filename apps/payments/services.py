@@ -76,7 +76,9 @@ def get_order_by_gateway_ref(gateway_order_id):
 
 
 @transaction.atomic
-def confirm_payment(order, gateway_order_id=None, paid_amount=None, paid_currency=None):
+def confirm_payment(order, gateway_order_id=None, paid_amount=None, paid_currency=None,
+                    gateway_reference=None, gateway_entity=None,
+                    gateway_transaction_id=None):
     """Confirma una recarga pagada y acredita el saldo.
 
     Si la pasarela reporta el importe cobrado (paid_amount/paid_currency),
@@ -84,6 +86,9 @@ def confirm_payment(order, gateway_order_id=None, paid_amount=None, paid_currenc
     declare otro importe se rechaza. Idempotente: si la orden ya estaba
     pagada no vuelve a acreditar nada. Devuelve la orden actualizada y si
     se acredito saldo en esta llamada.
+
+    Los datos de la pasarela (referencia, entidad, ID de transaccion) son
+    opcionales y solo se guardan si llegan con valor.
     """
     order = RechargeOrder.objects.select_for_update().get(pk=order.pk)
 
@@ -128,7 +133,16 @@ def confirm_payment(order, gateway_order_id=None, paid_amount=None, paid_currenc
 
     order.status = RechargeOrder.Status.PAID
     order.paid_at = timezone.now()
-    order.save(update_fields=['status', 'paid_at', 'gateway_order_id', 'updated_at'])
+    update_fields = ['status', 'paid_at', 'gateway_order_id', 'updated_at']
+    for field, value in (
+        ('gateway_reference', gateway_reference),
+        ('gateway_entity', gateway_entity),
+        ('gateway_transaction_id', gateway_transaction_id),
+    ):
+        if value:
+            setattr(order, field, str(value).strip())
+            update_fields.append(field)
+    order.save(update_fields=update_fields)
 
     logger.info(
         'Recarga confirmada: %s T para %s (orden %s)',

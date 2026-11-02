@@ -45,11 +45,21 @@ class RechargeOrderAdmin(admin.ModelAdmin):
         "currency",
         "status",
         "gateway",
+        "gateway_reference",
+        "gateway_transaction_id",
         "paid_at",
         "created_at",
     )
     list_filter = ("status", "gateway", "currency", "created_at")
-    search_fields = ("id", "user__username", "user__email", "gateway_order_id")
+    search_fields = (
+        "id",
+        "user__username",
+        "user__email",
+        "gateway_order_id",
+        "gateway_reference",
+        "gateway_entity",
+        "gateway_transaction_id",
+    )
     list_select_related = ("user", "package")
     readonly_fields = (
         "user",
@@ -60,6 +70,9 @@ class RechargeOrderAdmin(admin.ModelAdmin):
         "status",
         "gateway",
         "gateway_order_id",
+        "gateway_reference",
+        "gateway_entity",
+        "gateway_transaction_id",
         "error_message",
         "created_at",
         "paid_at",
@@ -75,7 +88,36 @@ class RechargeOrderAdmin(admin.ModelAdmin):
                     "para consultar en que estado quedo cada pago y, si hay un problema, "
                     "para saber cual fue el motivo."
                 ),
-                "fields": readonly_fields,
+                "fields": (
+                    "user",
+                    "package",
+                    "tangas_amount",
+                    "amount_eur",
+                    "currency",
+                    "status",
+                    "gateway",
+                    "gateway_order_id",
+                    "error_message",
+                    "created_at",
+                    "paid_at",
+                    "updated_at",
+                ),
+            },
+        ),
+        (
+            "Datos del pago en la pasarela",
+            {
+                "description": (
+                    "Estos datos los envia la pasarela de pago y se rellenan solos al "
+                    "confirmarse la recarga. La referencia y la entidad son las que el "
+                    "cliente usa para pagar; el ID de transaccion sirve para localizar "
+                    "el cobro si hay que reclamar o devolver el dinero."
+                ),
+                "fields": (
+                    "gateway_reference",
+                    "gateway_entity",
+                    "gateway_transaction_id",
+                ),
             },
         ),
     )
